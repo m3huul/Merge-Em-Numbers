@@ -45,18 +45,11 @@ public class BlockView : MonoBehaviour
 
     internal IEnumerator MergeBlock(BlockView Block)
     {
-        if (!BoardManager.Instance.BlockNumbers.Contains(blockData.value * 2))
-        {
-            BoardManager.Instance.AddNewBlockValue(blockData.value * 2);
-        }
         Block.m_image.DOFade(0, 0.1f);
         yield return Block.transform.DOLocalMoveY(transform.localPosition.y, 0.1f).WaitForCompletion();
         Destroy(Block.gameObject);
         blockData.value *= 2;
-
-        float t = (float)BoardManager.Instance.BlockNumbers.IndexOf(blockData.value) / (BoardManager.Instance.BlockNumbers.Count - 1);
-        m_image.color = BoardManager.Instance.colorGradient.Evaluate(t);
-
+        m_image.color = BoardManager.Instance.GetColorForValue(blockData.value);
         UpdateBlockText();
     }
 

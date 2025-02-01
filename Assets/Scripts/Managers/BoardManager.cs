@@ -31,7 +31,49 @@ public class BoardManager : MonoBehaviour
 
     void Start()
     {
+        for (int i = 0; i < 4; i++)
+        {
+            int newValue = GenerateNextNumber();
+            BlockColors.Add(GetColorForValue(newValue));
+            BlockNumbers.Add(newValue);
+        }
         SetupBlock();
+    }
+
+    int GenerateNextNumber()
+    {
+        int lastNumber = BlockNumbers[BlockNumbers.Count - 1];
+        return lastNumber * 2;  // Next value is double the last one
+    }
+
+    internal Color GetColorForValue(int value)
+    {
+        int index = BlockNumbers.IndexOf(value);
+        if (index != -1)
+        {
+            return BlockColors[index];  // If color already exists
+        }
+        else
+        {
+            // float t = Mathf.Log(value) / Mathf.Log(2048);  // Normalize in log scale
+            // return colorGradient.Evaluate(t);
+            return GenerateNewColor();
+        }
+    }
+
+    Color GenerateNewColor()
+    {
+        float hue = BlockNumbers.Count * 0.1f % 1;  // Gradually change hue
+        return Color.HSVToRGB(hue, 0.8f, 1.0f);  // Vibrant colors
+    }
+
+    internal void CheckAndExpandNumbers(int newValue)
+    {
+        if (!BlockNumbers.Contains(newValue))
+        {
+            BlockColors.Add(GetColorForValue(newValue));  // Auto-assign color
+            BlockNumbers.Add(newValue);
+        }
     }
 
     void SetupBlock()
@@ -76,9 +118,11 @@ public class BoardManager : MonoBehaviour
                 {
                     if (block.column == InputManager.Instance.m_columnIndex && block.row == rowIndex + 1)
                     {
+                        int newValue = m_boardBlocks[InputManager.Instance.m_columnIndex].Column[rowIndex + 1].value *= 2;
+                        CheckAndExpandNumbers(newValue);
                         yield return block.MergeBlock(_currMovingBlock);
                         BlockViews.Remove(_currMovingBlock);
-                        m_boardBlocks[InputManager.Instance.m_columnIndex].Column[rowIndex + 1].value *= 2;
+                        m_boardBlocks[InputManager.Instance.m_columnIndex].Column[rowIndex + 1].value = newValue;
                         LandedBlock.value = 0;
                         break;
                     }
@@ -89,18 +133,8 @@ public class BoardManager : MonoBehaviour
         {
 
         }
-
+        yield return new WaitForSeconds(0.2f);
         SetupBlock();
-    }
-
-    internal void AddNewBlockValue(int newValue)
-    {
-        BlockNumbers.Add(newValue);
-
-        // Assign a new color dynamically
-        float t = (float)BlockNumbers.Count / (BlockNumbers.Count + 5); // Keep it scaled smoothly
-        Color newColor = colorGradient.Evaluate(t);
-        BlockColors.Add(newColor);
     }
 
     KeyValuePair<Block, int> GetMovableBlock()

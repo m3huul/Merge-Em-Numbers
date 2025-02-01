@@ -6,45 +6,50 @@ using UnityEngine.EventSystems;
 public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
 {
     public static InputManager Instance;
-    [SerializeField] internal int m_columnIndex=2;
+    [SerializeField] internal int m_columnIndex = 2;
     private BlockView m_blockTransform;
 
-    void Awake(){
-        if(Instance==null){
-            Instance=this;
+    void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
         }
     }
-    
-    internal void setBlock(BlockView block){
-        m_blockTransform=block;
+
+    internal void setBlock(BlockView block)
+    {
+        m_blockTransform = block;
     }
 
-    public void OnPointerDown(PointerEventData eventData){
+    public void OnPointerDown(PointerEventData eventData)
+    {
         if (m_blockTransform != null)
         {
-            float closestDistance = float.MaxValue;
-            Transform closestColumnPosition = null;
+            // float closestDistance = float.MaxValue;
+            // Transform closestColumnPosition = null;
 
-            // Loop through the columns in BoardManager
-            for (int i = 0; i < BoardManager.Instance.m_boardBlocks.Count; i++)
-            {
-                if (BoardManager.Instance.m_boardBlocks[i].Column.Count > 0)
-                {
-                    // Get the X position of the first block in the column
-                    float columnX = BoardManager.Instance.m_boardBlocks[i].Column[0].boardPosition.position.x;
+            // // Loop through the columns in BoardManager
+            // for (int i = 0; i < BoardManager.Instance.m_boardBlocks.Count; i++)
+            // {
+            //     if (BoardManager.Instance.m_boardBlocks[i].Column.Count > 0)
+            //     {
+            //         // Get the X position of the first block in the column
+            //         float columnX = BoardManager.Instance.m_boardBlocks[i].Column[0].boardPosition.position.x;
 
-                    // Calculate the distance between the event position and the column's X position
-                    float distance = Mathf.Abs(eventData.position.x - columnX);
+            //         // Calculate the distance between the event position and the column's X position
+            //         float distance = Mathf.Abs(eventData.position.x - columnX);
 
-                    // Update the closest column if this one is nearer
-                    if (distance < closestDistance)
-                    {
-                        closestDistance = distance;
-                        closestColumnPosition = BoardManager.Instance.m_boardBlocks[i].Column[0].boardPosition;
-                        m_columnIndex=i;
-                    }
-                }
-            }
+            //         // Update the closest column if this one is nearer
+            //         if (distance < closestDistance)
+            //         {
+            //             closestDistance = distance;
+            //             closestColumnPosition = BoardManager.Instance.m_boardBlocks[i].Column[0].boardPosition;
+            //             m_columnIndex = i;
+            //         }
+            //     }
+            // }
+            Transform closestColumnPosition = BoardManager.Instance.m_boardBlocks[FindClosestColumnIndex(eventData.position.x)].Column[0].boardPosition;
 
             // Move the block to the closest column's X position if found
             if (closestColumnPosition != null)
@@ -55,37 +60,39 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
             }
         }
     }
-    public void OnPointerUp(PointerEventData eventData){
-        m_blockTransform=null;
+    public void OnPointerUp(PointerEventData eventData)
+    {
+        m_blockTransform = null;
         BoardManager.Instance.PullTheBlock(BoardManager.Instance.fastPullDownSpeed);
     }
 
-    public void OnDrag(PointerEventData eventData){
+    public void OnDrag(PointerEventData eventData)
+    {
         if (m_blockTransform != null)
         {
-            float closestDistance = float.MaxValue;
-            Transform closestColumnPosition = null;
+            // float closestDistance = float.MaxValue;
+            Transform closestColumnPosition = BoardManager.Instance.m_boardBlocks[FindClosestColumnIndex(eventData.position.x)].Column[0].boardPosition;
 
             // Loop through the columns in BoardManager
-            for (int i = 0; i < BoardManager.Instance.m_boardBlocks.Count; i++)
-            {
-                if (BoardManager.Instance.m_boardBlocks[i].Column.Count > 0)
-                {
-                    // Get the X position of the first block in the column
-                    float columnX = BoardManager.Instance.m_boardBlocks[i].Column[0].boardPosition.position.x;
+            // for (int i = 0; i < BoardManager.Instance.m_boardBlocks.Count; i++)
+            // {
+            //     if (BoardManager.Instance.m_boardBlocks[i].Column.Count > 0)
+            //     {
+            //         // Get the X position of the first block in the column
+            //         float columnX = BoardManager.Instance.m_boardBlocks[i].Column[0].boardPosition.position.x;
 
-                    // Calculate the distance between the event position and the column's X position
-                    float distance = Mathf.Abs(eventData.position.x - columnX);
+            //         // Calculate the distance between the event position and the column's X position
+            //         float distance = Mathf.Abs(eventData.position.x - columnX);
 
-                    // Update the closest column if this one is nearer
-                    if (distance < closestDistance)
-                    {
-                        closestDistance = distance;
-                        closestColumnPosition = BoardManager.Instance.m_boardBlocks[i].Column[0].boardPosition;
-                        m_columnIndex=i;
-                    }
-                }
-            }
+            //         // Update the closest column if this one is nearer
+            //         if (distance < closestDistance)
+            //         {
+            //             closestDistance = distance;
+            //             closestColumnPosition = BoardManager.Instance.m_boardBlocks[i].Column[0].boardPosition;
+            //             m_columnIndex = i;
+            //         }
+            //     }
+            // }
 
             // Move the block to the closest column's X position if found
             if (closestColumnPosition != null)
@@ -95,5 +102,25 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
                 m_blockTransform.transform.position = targetPosition;
             }
         }
+    }
+
+    private int FindClosestColumnIndex(float xPosition)
+    {
+        float closestDistance = float.MaxValue;
+        int closestIndex = 0;
+
+        for (int i = 0; i < BoardManager.Instance.m_boardBlocks.Count; i++)
+        {
+            float columnX = BoardManager.Instance.m_boardBlocks[i].Column[0].boardPosition.position.x;
+            float distance = Mathf.Abs(xPosition - columnX);
+
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestIndex = i;
+            }
+        }
+        m_columnIndex = closestIndex;
+        return closestIndex;
     }
 }

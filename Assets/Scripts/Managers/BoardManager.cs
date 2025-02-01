@@ -1,10 +1,9 @@
 using System;
-using DG;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
-using System.Threading.Tasks.Sources;
-using System.ComponentModel;
+using System.Collections;
+
 
 public class BoardManager : MonoBehaviour
 {
@@ -12,6 +11,9 @@ public class BoardManager : MonoBehaviour
     // [SerializeField] private KeyValuePair<int, float> PossibleValues=new(); //Make my own datatype
     [SerializeField] internal List<BoardBlocks> m_boardBlocks = new();
     [SerializeField] internal List<int> BlockNumbers = new();
+    [SerializeField] internal List<Color> BlockColors = new();
+    [SerializeField] internal Gradient colorGradient;
+    [SerializeField] private List<BlockView> BlockViews = new();
     [SerializeField] private Transform m_newBlocksParent;
     [SerializeField] private GameObject m_blockPrefab;
     [SerializeField] private float basePullDownSpeed = 15f;
@@ -41,44 +43,77 @@ public class BoardManager : MonoBehaviour
         PullTheBlock(basePullDownSpeed);
 
         InputManager.Instance.setBlock(_currMovingBlock);
+        BlockViews.Add(_currMovingBlock);
     }
 
     internal void PullTheBlock(float duration)
     {
-        KeyValuePair<Block, Vector3> BlockData = GetMovableBlock();
-
+        KeyValuePair<Block, int> BlockData = GetMovableBlock();
+        if (BlockData.Key == null)
+        {
+            Debug.LogError("Couldnt find a block to go to");
+            return;
+        }
         _currBlockTween?.Kill();
-        _currBlockTween = _currMovingBlock.transform.DOLocalMoveY(BlockData.Value.y, duration)
+        _currBlockTween = _currMovingBlock.transform.DOLocalMoveY(BlockData.Key.boardPosition.localPosition.y, duration)
         .OnComplete(() =>
         {
-            _currMovingBlock.transform.localPosition = BlockData.Value;
-            OnBlockLanded(BlockData.Key);
+            _currMovingBlock.transform.localPosition = BlockData.Key.boardPosition.localPosition;
+            StartCoroutine(OnBlockLanded(BlockData.Key, BlockData.Value));
         });
-
     }
 
-    void OnBlockLanded(Block LandedBlock)
+    IEnumerator OnBlockLanded(Block LandedBlock, int rowIndex)
     {
-        _currMovingBlock.OnLand();
+        _currMovingBlock.OnLand(rowIndex, InputManager.Instance.m_columnIndex);
         LandedBlock.value = _currMovingBlock.blockData.value;
+        yield return new WaitForSeconds(0.2f);
+        if (m_boardBlocks[0].Column.Count - 1 != rowIndex)
+        {
+            if (m_boardBlocks[InputManager.Instance.m_columnIndex].Column[rowIndex + 1].value == LandedBlock.value)
+            {
+                foreach (BlockView block in BlockViews)
+                {
+                    if (block.column == InputManager.Instance.m_columnIndex && block.row == rowIndex + 1)
+                    {
+                        yield return block.MergeBlock(_currMovingBlock);
+                        BlockViews.Remove(_currMovingBlock);
+                        m_boardBlocks[InputManager.Instance.m_columnIndex].Column[rowIndex + 1].value *= 2;
+                        LandedBlock.value = 0;
+                        break;
+                    }
+                }
+            }
+        }
+        else
+        {
+
+        }
+
         SetupBlock();
     }
 
-    KeyValuePair<Block, Vector3> GetMovableBlock()
+    internal void AddNewBlockValue(int newValue)
     {
-        KeyValuePair<Block, Vector3> BlockData = new();
-        Vector3 targetLocalPosi = new();
+        BlockNumbers.Add(newValue);
+
+        // Assign a new color dynamically
+        float t = (float)BlockNumbers.Count / (BlockNumbers.Count + 5); // Keep it scaled smoothly
+        Color newColor = colorGradient.Evaluate(t);
+        BlockColors.Add(newColor);
+    }
+
+    KeyValuePair<Block, int> GetMovableBlock()
+    {
         for (int i = m_boardBlocks[InputManager.Instance.m_columnIndex].Column.Count - 1; i >= 0; i--)
         {
             int val = m_boardBlocks[InputManager.Instance.m_columnIndex].Column[i].value;
             if (val == 0)
             {
-                targetLocalPosi = m_boardBlocks[InputManager.Instance.m_columnIndex].Column[i].boardPosition.localPosition;
-                BlockData = new KeyValuePair<Block, Vector3>(m_boardBlocks[InputManager.Instance.m_columnIndex].Column[i], targetLocalPosi);
-                return BlockData;
+                return new KeyValuePair<Block, int>(m_boardBlocks[InputManager.Instance.m_columnIndex].Column[i], i);
             }
         }
-        return BlockData;
+        return new KeyValuePair<Block, int>(null, 0);
     }
 }
 

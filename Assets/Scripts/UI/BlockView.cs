@@ -56,6 +56,7 @@ public class BlockView : MonoBehaviour
         blockData.value *= 2;
         m_image.color = BoardManager.Instance.GetColorForValue(blockData.value);
         UpdateBlockText();
+        // yield return BoardManager.Instance.StartCoroutine(BoardManager.Instance.OnBlockLanded(this, row));
     }
 
     internal IEnumerator MergeBlock(BlockView Block1, BlockView Block2)
@@ -69,6 +70,7 @@ public class BlockView : MonoBehaviour
         blockData.value *= 4;
         m_image.color = BoardManager.Instance.GetColorForValue(blockData.value);
         UpdateBlockText();
+        // yield return BoardManager.Instance.StartCoroutine(BoardManager.Instance.OnBlockLanded(this, row));
     }
 
     void UpdateBlockText()

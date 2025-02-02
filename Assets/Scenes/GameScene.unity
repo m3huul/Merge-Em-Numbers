@@ -1014,6 +1014,8 @@ MonoBehaviour:
   m_blockPrefab: {fileID: 2474122655813564630, guid: 351ec6bc67853d24690928fcd3f9582f, type: 3}
   basePullDownSpeed: 25
   fastPullDownSpeed: 0.2
+  predictiedValue: 0
+  predictedBlock: {fileID: 521898887}
 --- !u!4 &341955747
 Transform:
   m_ObjectHideFlags: 0
@@ -1651,6 +1653,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &521898887 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3062556184981639312, guid: 351ec6bc67853d24690928fcd3f9582f, type: 3}
+  m_PrefabInstance: {fileID: 287996895}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6cc07d3017293b4180f6a91a53d5dc6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &561107302
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4909,6 +4922,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_columnIndex: 2
+  m_blockTransform: {fileID: 0}
 --- !u!1001 &2036424105
 PrefabInstance:
   m_ObjectHideFlags: 0

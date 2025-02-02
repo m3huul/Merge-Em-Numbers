@@ -8,7 +8,6 @@ using System.Collections;
 public class BoardManager : MonoBehaviour
 {
     public static BoardManager Instance;
-    // [SerializeField] private KeyValuePair<int, float> PossibleValues=new(); //Make my own datatype
     [SerializeField] internal List<BoardBlocks> m_boardBlocks = new();
     [SerializeField] internal List<int> BlockNumbers = new();
     [SerializeField] internal List<Color> BlockColors = new();
@@ -18,6 +17,8 @@ public class BoardManager : MonoBehaviour
     [SerializeField] private GameObject m_blockPrefab;
     [SerializeField] private float basePullDownSpeed = 15f;
     [SerializeField] internal float fastPullDownSpeed = 0.2f;
+    [SerializeField] private int predictiedValue = 0;
+    [SerializeField] private BlockView predictedBlock;
     private BlockView _currMovingBlock;
     private Tween _currBlockTween;
 
@@ -78,9 +79,22 @@ public class BoardManager : MonoBehaviour
 
     void SetupBlock()
     {
+        int randomIndex;
+        if (predictiedValue == 0)
+        {
+            randomIndex = UnityEngine.Random.Range(0, BoardManager.Instance.BlockNumbers.Count);
+            predictiedValue = UnityEngine.Random.Range(0, BoardManager.Instance.BlockNumbers.Count);
+        }
+        else
+        {
+            randomIndex = predictiedValue;
+            predictiedValue = UnityEngine.Random.Range(0, BoardManager.Instance.BlockNumbers.Count);
+        }
+        predictedBlock.SetPredictedValue(predictiedValue);
+
         GameObject FirstBlock = Instantiate(m_blockPrefab, m_boardBlocks[2].Column[0].boardPosition.position, m_boardBlocks[2].Column[0].boardPosition.rotation, m_newBlocksParent);
         _currMovingBlock = FirstBlock.GetComponent<BlockView>();                        //Test block instantiation
-        _currMovingBlock.initBlockView();
+        _currMovingBlock.initBlockView(randomIndex);
 
         PullTheBlock(basePullDownSpeed);
 
@@ -127,6 +141,34 @@ public class BoardManager : MonoBehaviour
                         break;
                     }
                 }
+            }
+            else if (m_boardBlocks[InputManager.Instance.m_columnIndex + 1].Column[rowIndex]?.value == LandedBlock.value
+                && m_boardBlocks[InputManager.Instance.m_columnIndex - 1].Column[rowIndex]?.value == LandedBlock.value)
+            {
+                BlockView view1 = null;
+                BlockView view2 = null;
+                foreach (BlockView view in BlockViews)
+                {
+                    if (view.column == InputManager.Instance.m_columnIndex + 1 && view.row == rowIndex)
+                    {
+                        view1 = view;
+                    }
+                    if (view.column == InputManager.Instance.m_columnIndex - 1 && view.row == rowIndex)
+                    {
+                        view2 = view;
+                    }
+                }
+                if (view1 == null || view2 == null)
+                {
+                    Debug.LogError("Couldnt find block views");
+                    yield break;
+                }
+                int newValue = _currMovingBlock.blockData.value *= 4;
+                CheckAndExpandNumbers(newValue);
+                yield return _currMovingBlock.MergeBlock(view1, view2);
+                BlockViews.Remove(view1);
+                BlockViews.Remove(view2);
+                m_boardBlocks[InputManager.Instance.m_columnIndex].Column[rowIndex].value = newValue;
             }
         }
         else

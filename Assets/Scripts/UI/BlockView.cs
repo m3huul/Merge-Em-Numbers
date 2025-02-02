@@ -21,7 +21,7 @@ public class BlockView : MonoBehaviour
         m_image = GetComponent<Image>();
     }
 
-    internal void initBlockView()
+    internal void initBlockView(int index)
     {
         Vector3 initPosi = BoardManager.Instance.m_boardBlocks[InputManager.Instance.m_columnIndex].Column[0].boardPosition.position;
         Vector3 StartPosi = initPosi + new Vector3(0, 200, 0);
@@ -30,10 +30,15 @@ public class BlockView : MonoBehaviour
         blockData.boardPosition = transform;
 
         //Value Calc here
-        int randomIndex = Random.Range(0, BoardManager.Instance.BlockNumbers.Count);
-        m_image.color = BoardManager.Instance.BlockColors[randomIndex];
-        blockData.value = BoardManager.Instance.BlockNumbers[randomIndex];
+        m_image.color = BoardManager.Instance.BlockColors[index];
+        blockData.value = BoardManager.Instance.BlockNumbers[index];
         UpdateBlockText();
+    }
+
+    internal void SetPredictedValue(int index)
+    {
+        m_image.color = BoardManager.Instance.BlockColors[index];
+        m_numText.text = BoardManager.Instance.BlockNumbers[index].ToString();
     }
 
     internal void OnLand(int Row, int Col)
@@ -49,6 +54,19 @@ public class BlockView : MonoBehaviour
         yield return Block.transform.DOLocalMoveY(transform.localPosition.y, 0.1f).WaitForCompletion();
         Destroy(Block.gameObject);
         blockData.value *= 2;
+        m_image.color = BoardManager.Instance.GetColorForValue(blockData.value);
+        UpdateBlockText();
+    }
+
+    internal IEnumerator MergeBlock(BlockView Block1, BlockView Block2)
+    {
+        Block1.m_image.DOFade(0, 0.1f);
+        Block2.m_image.DOFade(0, 0.1f);
+        Block1.transform.DOLocalMoveX(transform.localPosition.x, 0.1f);
+        yield return Block2.transform.DOLocalMoveX(transform.localPosition.x, 0.1f).WaitForCompletion();
+        Destroy(Block1.gameObject);
+        Destroy(Block2.gameObject);
+        blockData.value *= 4;
         m_image.color = BoardManager.Instance.GetColorForValue(blockData.value);
         UpdateBlockText();
     }

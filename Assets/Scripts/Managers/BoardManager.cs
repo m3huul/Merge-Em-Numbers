@@ -21,6 +21,7 @@ public class BoardManager : MonoBehaviour
     [SerializeField] private BlockView predictedBlock;
     private BlockView _currMovingBlock;
     private Tween _currBlockTween;
+    private int activeMergeCheck = 0;
 
     void Awake()
     {
@@ -77,44 +78,63 @@ public class BoardManager : MonoBehaviour
 
     void SetupBlock()
     {
-        int randomIndex;
         if (predictiedValue == 0)
         {
-            randomIndex = UnityEngine.Random.Range(0, BlockNumbers.Count);
             predictiedValue = UnityEngine.Random.Range(0, BlockNumbers.Count);
         }
-        else
-        {
-            randomIndex = predictiedValue;
-            predictiedValue = UnityEngine.Random.Range(0, BlockNumbers.Count);
-        }
+
+        int randomIndex = predictiedValue; // Use the predicted value
+        predictiedValue = UnityEngine.Random.Range(0, BlockNumbers.Count); // Generate next prediction
+
         predictedBlock.SetPredictedValue(predictiedValue);
 
         GameObject FirstBlock = Instantiate(m_blockPrefab, m_boardBlocks[2].Column[0].boardPosition.position, Quaternion.identity, m_newBlocksParent);
         _currMovingBlock = FirstBlock.GetComponent<BlockView>();
         _currMovingBlock.initBlockView(randomIndex);
 
-        PullTheBlock(basePullDownSpeed);
+        StartCoroutine(PullTheBlock(basePullDownSpeed));
 
         InputManager.Instance.setBlock(_currMovingBlock);
         BlockViews.Add(_currMovingBlock);
     }
 
-    internal void PullTheBlock(float duration)
+
+    internal IEnumerator PullTheBlock(float duration)
     {
         KeyValuePair<Block, int> BlockData = GetMovableBlock();
         if (BlockData.Key == null)
         {
             Debug.Log("Game Over - No available space!");
-            return;
+            yield break;
         }
-
         _currBlockTween?.Kill();
         _currBlockTween = _currMovingBlock.transform.DOLocalMoveY(BlockData.Key.boardPosition.localPosition.y, duration)
         .OnComplete(() =>
         {
+            activeMergeCheck++;
             _currMovingBlock.transform.localPosition = BlockData.Key.boardPosition.localPosition;
             StartCoroutine(OnBlockLanded(_currMovingBlock, BlockData.Value));
+            StartCoroutine(WaitForGameLoop());
+        });
+    }
+
+    private IEnumerator WaitForGameLoop()
+    {
+        while (activeMergeCheck != 0)
+        {
+            yield return null;
+        }
+        SetupBlock();
+    }
+
+    private void PullTheBlock(float duration, BlockView blockView, KeyValuePair<Block, int> BlockData)
+    {
+        activeMergeCheck++;
+        blockView.transform.DOLocalMoveY(BlockData.Key.boardPosition.localPosition.y, duration)
+        .OnComplete(() =>
+        {
+            blockView.transform.localPosition = BlockData.Key.boardPosition.localPosition;
+            StartCoroutine(OnBlockLanded(blockView, BlockData.Value));
         });
     }
 
@@ -126,8 +146,6 @@ public class BoardManager : MonoBehaviour
 
         yield return new WaitForSeconds(0.2f);
 
-        bool merged = false;
-
         // 🔹 Downward Merge
         if (rowIndex < m_boardBlocks[colIndex].Column.Count - 1 &&
             m_boardBlocks[colIndex].Column[rowIndex + 1].value == landedBlock.blockData.value)
@@ -138,60 +156,98 @@ public class BoardManager : MonoBehaviour
                 int newValue = landedBlock.blockData.value * 2;
                 CheckAndExpandNumbers(newValue);
 
-                yield return belowBlock.MergeBlock(_currMovingBlock);
-                BlockViews.Remove(_currMovingBlock);
+                yield return belowBlock.MergeBlock(landedBlock);
+                BlockViews.Remove(landedBlock);
 
                 m_boardBlocks[colIndex].Column[rowIndex + 1].value = newValue;
                 m_boardBlocks[colIndex].Column[rowIndex].value = 0;
-
-                comboCount++;
-                merged = true;
-                yield return StartCoroutine(OnBlockLanded(belowBlock, rowIndex + 1, comboCount));
+                rowIndex++;
+                landedBlock = BlockViews.FirstOrDefault(v => v.row == rowIndex && v.column == colIndex);
             }
         }
 
         // 🔹 Left and Right Merge
         BlockView leftBlock = GetBlockViewAt(colIndex - 1, rowIndex);
         BlockView rightBlock = GetBlockViewAt(colIndex + 1, rowIndex);
-        bool mergedLR = false;
+        bool leftBool = false;
+        bool rightBool = false;
         if (leftBlock != null && leftBlock.blockData.value == landedBlock.blockData.value)
         {
-            int newValue = landedBlock.blockData.value * 2;
-            CheckAndExpandNumbers(newValue);
-
-            // Merge with the left block
-            yield return _currMovingBlock.MergeBlock(leftBlock);
+            leftBool = true;
+        }
+        else if (rightBlock != null && rightBlock.blockData.value == landedBlock.blockData.value)
+        {
+            rightBool = true;
+        }
+        int newVal = 0;
+        bool merged = false;
+        if (leftBool && rightBool)
+        {
+            merged = true;
+            newVal = landedBlock.blockData.value * 4;
+            CheckAndExpandNumbers(newVal);
+            CheckAndExpandNumbers(landedBlock.blockData.value * 2);
+            yield return _currMovingBlock.MergeBlock(leftBlock, rightBlock);
+            BlockViews.Remove(leftBlock);
+            BlockViews.Remove(rightBlock);
+            m_boardBlocks[leftBlock.column].Column[leftBlock.row].value = 0;
+            m_boardBlocks[rightBlock.column].Column[rightBlock.row].value = 0;
+        }
+        else if (leftBool)
+        {
+            merged = true;
+            newVal = landedBlock.blockData.value * 2;
+            CheckAndExpandNumbers(newVal);
+            yield return _currMovingBlock.MergeBlock(leftBlock, true);
             BlockViews.Remove(leftBlock);
             m_boardBlocks[leftBlock.column].Column[leftBlock.row].value = 0;
-
-            m_boardBlocks[colIndex].Column[rowIndex].value = newValue;
-            comboCount++;
-            mergedLR = true;
         }
-
-        if (rightBlock != null && rightBlock.blockData.value == landedBlock.blockData.value)
+        else if (rightBool)
         {
-            int newValue = landedBlock.blockData.value * 2;
-            CheckAndExpandNumbers(newValue);
-
-            // Merge with the right block
-            yield return _currMovingBlock.MergeBlock(rightBlock);
+            merged = true;
+            newVal = landedBlock.blockData.value * 2;
+            CheckAndExpandNumbers(newVal);
+            yield return _currMovingBlock.MergeBlock(rightBlock, true);
             BlockViews.Remove(rightBlock);
             m_boardBlocks[rightBlock.column].Column[rightBlock.row].value = 0;
-
-            m_boardBlocks[colIndex].Column[rowIndex].value = newValue;
-            comboCount++;
-            mergedLR = true;
         }
 
-        if (mergedLR)
+        if (merged)
         {
-            yield return StartCoroutine(OnBlockLanded(_currMovingBlock, rowIndex, comboCount));
+            m_boardBlocks[colIndex].Column[rowIndex].value = newVal;
+
+            List<BlockView> blocksToMove = new List<BlockView>();
+
+            for (int i = 0; i < m_boardBlocks.Count; i++)
+            {
+                for (int j = 0; j < m_boardBlocks[i].Column.Count; j++)
+                {
+                    KeyValuePair<Block, int> BlockData = GetMovableBlock(i, j);
+                    if (BlockData.Key == null) continue;
+
+                    BlockView view = BlockViews.FirstOrDefault(v => v.row == j && v.column == i);
+                    if (view != null)
+                    {
+                        blocksToMove.Add(view);
+                    }
+                }
+            }
+
+            if (blocksToMove.Count > 0)
+            {
+                foreach (BlockView blockView in blocksToMove)
+                {
+                    KeyValuePair<Block, int> BlockData = GetMovableBlock(blockView.column, blockView.row);
+                    if (BlockData.Key != null)
+                    {
+                        PullTheBlock(fastPullDownSpeed, blockView, BlockData);
+                    }
+                }
+            }
         }
-        else if (!merged)
+        if (activeMergeCheck > 0)
         {
-            // No merge, move to the next setup block
-            SetupBlock();
+            activeMergeCheck--;
         }
     }
 
@@ -221,6 +277,28 @@ public class BoardManager : MonoBehaviour
             }
         }
         return new KeyValuePair<Block, int>(null, 0);
+    }
+
+    KeyValuePair<Block, int> GetMovableBlock(int col, int row)
+    {
+        Block block = null;
+        int Row = 0;
+        for (int i = row + 1; i < m_boardBlocks[col].Column.Count - 1; i++)
+        {
+            if (m_boardBlocks[col].Column[i].value == 0)
+            {
+                block = m_boardBlocks[col].Column[i];
+                Row = i;
+            }
+        }
+        if (block != null)
+        {
+            return new KeyValuePair<Block, int>(block, Row);
+        }
+        else
+        {
+            return new KeyValuePair<Block, int>(null, 0);
+        }
     }
 }
 

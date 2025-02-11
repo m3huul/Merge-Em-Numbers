@@ -48,15 +48,26 @@ public class BlockView : MonoBehaviour
         column = Col;
     }
 
-    internal IEnumerator MergeBlock(BlockView Block)
+    internal IEnumerator MergeBlock(BlockView Block, bool horizontal = false)
     {
-        Block.m_image.DOFade(0, 0.1f);
-        yield return Block.transform.DOLocalMoveY(transform.localPosition.y, 0.1f).WaitForCompletion();
-        Destroy(Block.gameObject);
-        blockData.value *= 2;
-        m_image.color = BoardManager.Instance.GetColorForValue(blockData.value);
-        UpdateBlockText();
-        // yield return BoardManager.Instance.StartCoroutine(BoardManager.Instance.OnBlockLanded(this, row));
+        if (!horizontal)
+        {
+            Block.m_image.DOFade(0, 0.1f);
+            yield return Block.transform.DOLocalMoveY(transform.localPosition.y, 0.1f).WaitForCompletion();
+            Destroy(Block.gameObject);
+            blockData.value *= 2;
+            m_image.color = BoardManager.Instance.GetColorForValue(blockData.value);
+            UpdateBlockText();
+        }
+        else
+        {
+            Block.m_image.DOFade(0, 0.1f);
+            yield return Block.transform.DOLocalMoveX(transform.localPosition.x, 0.1f).WaitForCompletion();
+            Destroy(Block.gameObject);
+            blockData.value *= 2;
+            m_image.color = BoardManager.Instance.GetColorForValue(blockData.value);
+            UpdateBlockText();
+        }
     }
 
     internal IEnumerator MergeBlock(BlockView Block1, BlockView Block2)
@@ -70,7 +81,6 @@ public class BlockView : MonoBehaviour
         blockData.value *= 4;
         m_image.color = BoardManager.Instance.GetColorForValue(blockData.value);
         UpdateBlockText();
-        // yield return BoardManager.Instance.StartCoroutine(BoardManager.Instance.OnBlockLanded(this, row));
     }
 
     void UpdateBlockText()

@@ -31,7 +31,7 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
         if (m_blockTransform)
         {
             m_blockTransform = null;
-            BoardManager.Instance.PullTheBlock(BoardManager.Instance.fastPullDownSpeed);
+            StartCoroutine(BoardManager.Instance.PullTheBlock(BoardManager.Instance.fastPullDownSpeed));
         }
     }
 

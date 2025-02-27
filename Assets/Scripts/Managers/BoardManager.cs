@@ -118,14 +118,6 @@ public class BoardManager : MonoBehaviour
         });
     }
 
-    private IEnumerator WaitForGameLoop()
-    {
-        while (activeMergeCheck != 0)
-        {
-            yield return null;
-        }
-        SetupBlock();
-    }
 
     private void PullTheBlock(float duration, BlockView blockView, KeyValuePair<Block, int> BlockData)
     {
@@ -136,6 +128,16 @@ public class BoardManager : MonoBehaviour
             blockView.transform.localPosition = BlockData.Key.boardPosition.localPosition;
             StartCoroutine(OnBlockLanded(blockView, BlockData.Value));
         });
+    }
+
+
+    private IEnumerator WaitForGameLoop()
+    {
+        while (activeMergeCheck != 0)
+        {
+            yield return null;
+        }
+        SetupBlock();
     }
 
     internal IEnumerator OnBlockLanded(BlockView landedBlock, int rowIndex, int comboCount = 0)
@@ -173,10 +175,12 @@ public class BoardManager : MonoBehaviour
         bool rightBool = false;
         if (leftBlock != null && leftBlock.blockData.value == landedBlock.blockData.value)
         {
+            Debug.Log("called left bool");
             leftBool = true;
         }
         else if (rightBlock != null && rightBlock.blockData.value == landedBlock.blockData.value)
         {
+            Debug.Log("called right bool");
             rightBool = true;
         }
         int newVal = 0;
@@ -216,34 +220,33 @@ public class BoardManager : MonoBehaviour
         {
             m_boardBlocks[colIndex].Column[rowIndex].value = newVal;
 
-            List<BlockView> blocksToMove = new List<BlockView>();
+            // List<BlockView> blocksToMove = new List<BlockView>();
 
-            for (int i = 0; i < m_boardBlocks.Count; i++)
+            foreach (BlockView view in BlockViews)
             {
-                for (int j = 0; j < m_boardBlocks[i].Column.Count; j++)
+                if (view.row < m_boardBlocks[view.column].Column.Count - 1 && m_boardBlocks[view.column].Column[view.row - 1].value == 0)
                 {
-                    KeyValuePair<Block, int> BlockData = GetMovableBlock(i, j);
-                    if (BlockData.Key == null) continue;
-
-                    BlockView view = BlockViews.FirstOrDefault(v => v.row == j && v.column == i);
-                    if (view != null)
+                    for (int i = m_boardBlocks[view.column].Column.Count - 1; i >= 0; i--)
                     {
-                        blocksToMove.Add(view);
+                        if (m_boardBlocks[view.column].Column[i].value == 0)
+                        {
+                            PullTheBlock(fastPullDownSpeed, view, new KeyValuePair<Block, int>(m_boardBlocks[view.column].Column[i], i));
+                        }
                     }
                 }
             }
 
-            if (blocksToMove.Count > 0)
-            {
-                foreach (BlockView blockView in blocksToMove)
-                {
-                    KeyValuePair<Block, int> BlockData = GetMovableBlock(blockView.column, blockView.row);
-                    if (BlockData.Key != null)
-                    {
-                        PullTheBlock(fastPullDownSpeed, blockView, BlockData);
-                    }
-                }
-            }
+            // if (blocksToMove.Count > 0)
+            // {
+            //     foreach (BlockView blockView in blocksToMove)
+            //     {
+            //         KeyValuePair<Block, int> BlockData = GetMovableBlock(blockView.column, blockView.row);
+            //         if (BlockData.Key != null)
+            //         {
+            //             PullTheBlock(fastPullDownSpeed, blockView, BlockData);
+            //         }
+            //     }
+            // }
         }
         if (activeMergeCheck > 0)
         {

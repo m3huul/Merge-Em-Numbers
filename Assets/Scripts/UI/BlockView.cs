@@ -87,4 +87,13 @@ public class BlockView : MonoBehaviour
     {
         m_numText.text = blockData.value.ToString();
     }
+
+    internal bool TryMerge(BlockView otherBlock)
+    {
+        if (blockData.value == otherBlock.blockData.value) 
+        {
+          return true;
+        }
+        return false;
+    }
 }

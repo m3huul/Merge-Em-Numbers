@@ -82,11 +82,15 @@ public class BoardManager : MonoBehaviour
     if (!initBlock)
     {
       initBlock = true;
-      predictiedValue = UnityEngine.Random.Range(0, BlockNumbers.Count);
+      predictiedValue = 0;
+      // predictiedValue = UnityEngine.Random.Range(0, 4);
+      // predictiedValue = UnityEngine.Random.Range(0, BlockNumbers.Count);
     }
 
     int randomIndex = predictiedValue; // Use the predicted value
-    predictiedValue = UnityEngine.Random.Range(0, BlockNumbers.Count); // Generate next prediction
+    predictiedValue = 0; // Generate next prediction
+    // predictiedValue = UnityEngine.Random.Range(0, 4); // Generate next prediction
+    // predictiedValue = UnityEngine.Random.Range(0, BlockNumbers.Count); // Generate next prediction
 
     predictedBlock.SetPredictedValue(predictiedValue);
 
@@ -151,7 +155,7 @@ public class BoardManager : MonoBehaviour
     yield return new WaitForSeconds(0.2f);
 
     // 🔹 Downward Merge
-    if (rowIndex < m_boardBlocks[colIndex].Column.Count - 1 &&
+    while (rowIndex < m_boardBlocks[colIndex].Column.Count - 1 &&
         m_boardBlocks[colIndex].Column[rowIndex + 1].value == landedBlock.blockData.value)
     {
       BlockView belowBlock = GetBlockViewAt(colIndex, rowIndex + 1);
@@ -170,7 +174,7 @@ public class BoardManager : MonoBehaviour
       }
     }
 
-    // 🔹 Left and Right Merge
+    yield return new WaitForSeconds(0.2f);
     BlockView leftBlock = GetBlockViewAt(colIndex - 1, rowIndex);
     BlockView rightBlock = GetBlockViewAt(colIndex + 1, rowIndex);
     bool leftBool = false;
@@ -180,7 +184,7 @@ public class BoardManager : MonoBehaviour
       Debug.Log("called left bool");
       leftBool = true;
     }
-    else if (rightBlock != null && rightBlock.blockData.value == landedBlock.blockData.value)
+    if (rightBlock != null && rightBlock.blockData.value == landedBlock.blockData.value)
     {
       Debug.Log("called right bool");
       rightBool = true;
@@ -193,7 +197,7 @@ public class BoardManager : MonoBehaviour
       newVal = landedBlock.blockData.value * 4;
       CheckAndExpandNumbers(newVal);
       CheckAndExpandNumbers(landedBlock.blockData.value * 2);
-      yield return _currMovingBlock.MergeBlock(leftBlock, rightBlock);
+      yield return landedBlock.MergeBlock(leftBlock, rightBlock);
       BlockViews.Remove(leftBlock);
       BlockViews.Remove(rightBlock);
       m_boardBlocks[leftBlock.column].Column[leftBlock.row].value = 0;
@@ -218,6 +222,7 @@ public class BoardManager : MonoBehaviour
       m_boardBlocks[rightBlock.column].Column[rightBlock.row].value = 0;
     }
 
+    yield return new WaitForSeconds(0.2f);
     if (merged)
     {
       m_boardBlocks[colIndex].Column[rowIndex].value = newVal;
@@ -226,7 +231,6 @@ public class BoardManager : MonoBehaviour
       {
         if (view.row < m_boardBlocks[view.column].Column.Count - 1)
         {
-          // 🔹 Find the lowest available empty row
           int lowestEmptyRow = -1;
           for (int i = 0; i < m_boardBlocks[view.column].Column.Count; i++)
           {
@@ -236,7 +240,6 @@ public class BoardManager : MonoBehaviour
             }
           }
 
-          // 🔹 If an empty row was found below, move the block
           if (lowestEmptyRow != -1 && lowestEmptyRow > view.row)
           {
             PullTheBlock(fastPullDownSpeed, view,

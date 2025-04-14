@@ -16,7 +16,6 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
             Instance = this;
         }
     }
-
     internal void setBlock(BlockView block)
     {
         m_blockTransform = block;

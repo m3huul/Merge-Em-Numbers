@@ -14,7 +14,6 @@ public class BlockView : MonoBehaviour
     private TMP_Text m_numText;
     internal Image m_image;
     internal bool Landed = false;
-
     void Awake()
     {
         m_numText = transform.GetChild(0).GetComponent<TMP_Text>();

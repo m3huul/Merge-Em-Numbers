@@ -82,14 +82,14 @@ public class BoardManager : MonoBehaviour
     if (!initBlock)
     {
       initBlock = true;
-      predictiedValue = 0;
-      // predictiedValue = UnityEngine.Random.Range(0, 4);
+      // predictiedValue = 0;
+      predictiedValue = UnityEngine.Random.Range(0, 4);
       // predictiedValue = UnityEngine.Random.Range(0, BlockNumbers.Count);
     }
 
     int randomIndex = predictiedValue; // Use the predicted value
     predictiedValue = 0; // Generate next prediction
-    // predictiedValue = UnityEngine.Random.Range(0, 4); // Generate next prediction
+    predictiedValue = UnityEngine.Random.Range(0, 4); // Generate next prediction
     // predictiedValue = UnityEngine.Random.Range(0, BlockNumbers.Count); // Generate next prediction
 
     predictedBlock.SetPredictedValue(predictiedValue);
@@ -132,7 +132,7 @@ public class BoardManager : MonoBehaviour
     .OnComplete(() =>
     {
       blockView.transform.localPosition = BlockData.Key.boardPosition.localPosition;
-      StartCoroutine(OnBlockLanded(blockView, BlockData.Value));
+      StartCoroutine(OnBlockLanded(blockView, BlockData.Value, blockView.column));
     });
   }
 
@@ -146,18 +146,25 @@ public class BoardManager : MonoBehaviour
     SetupBlock();
   }
 
-  internal IEnumerator OnBlockLanded(BlockView landedBlock, int rowIndex, int comboCount = 0)
+  internal IEnumerator OnBlockLanded(BlockView landedBlock, int rowIndex, int col = -1)
   {
-    int colIndex = InputManager.Instance.m_columnIndex;
+    int colIndex;
+    if(col == -1)
+      colIndex = InputManager.Instance.m_columnIndex;
+    else
+      colIndex=col;
+
     _currMovingBlock.OnLand(rowIndex, colIndex);
     m_boardBlocks[colIndex].Column[rowIndex].value = landedBlock.blockData.value;
-
-    yield return new WaitForSeconds(0.2f);
+    bool downwardMerge = false;
+    yield return new WaitForSeconds(0.4f);
 
     // 🔹 Downward Merge
     while (rowIndex < m_boardBlocks[colIndex].Column.Count - 1 &&
         m_boardBlocks[colIndex].Column[rowIndex + 1].value == landedBlock.blockData.value)
     {
+      Debug.Log("RowIndex in downward merge : " + rowIndex);
+      downwardMerge = true;
       BlockView belowBlock = GetBlockViewAt(colIndex, rowIndex + 1);
       if (belowBlock != null)
       {
@@ -174,19 +181,21 @@ public class BoardManager : MonoBehaviour
       }
     }
 
-    yield return new WaitForSeconds(0.2f);
+    if(downwardMerge)
+      yield return new WaitForSeconds(0.4f);
+
     BlockView leftBlock = GetBlockViewAt(colIndex - 1, rowIndex);
     BlockView rightBlock = GetBlockViewAt(colIndex + 1, rowIndex);
     bool leftBool = false;
     bool rightBool = false;
     if (leftBlock != null && leftBlock.blockData.value == landedBlock.blockData.value)
     {
-      Debug.Log("called left bool");
+      Debug.Log("called left bool, left val: " + leftBlock.blockData.value + " and curr block val: " + landedBlock.blockData.value);
       leftBool = true;
     }
     if (rightBlock != null && rightBlock.blockData.value == landedBlock.blockData.value)
     {
-      Debug.Log("called right bool");
+      Debug.Log("called right bool, right val: " + rightBlock.blockData.value + " and curr block val: " + landedBlock.blockData.value);
       rightBool = true;
     }
     int newVal = 0;
@@ -222,13 +231,18 @@ public class BoardManager : MonoBehaviour
       m_boardBlocks[rightBlock.column].Column[rightBlock.row].value = 0;
     }
 
-    yield return new WaitForSeconds(0.2f);
     if (merged)
     {
+      yield return new WaitForSeconds(0.4f);
       m_boardBlocks[colIndex].Column[rowIndex].value = newVal;
 
-      foreach (BlockView view in BlockViews)
+      List<IEnumerator> coroutines = new();
+      // List<BlockView> blocksToRecheck = new();
+
+      foreach (BlockView view in BlockViews.ToList())
       {
+        if (view == null) continue;
+
         if (view.row < m_boardBlocks[view.column].Column.Count - 1)
         {
           int lowestEmptyRow = -1;
@@ -242,12 +256,34 @@ public class BoardManager : MonoBehaviour
 
           if (lowestEmptyRow != -1 && lowestEmptyRow > view.row)
           {
-            PullTheBlock(fastPullDownSpeed, view,
-                new KeyValuePair<Block, int>(m_boardBlocks[view.column].Column[lowestEmptyRow], lowestEmptyRow));
+            // Update old position
+            m_boardBlocks[view.column].Column[view.row].value = 0;
+
+            // Update view position data
+            view.row = lowestEmptyRow;
+
+            // Update new position
+            m_boardBlocks[view.column].Column[lowestEmptyRow].value = view.blockData.value;
+
+            // Add to recheck list
+            // blocksToRecheck.Add(view);
+
+            // Pull block and wait until it lands
+            PullTheBlock(0.1f, view, new KeyValuePair<Block, int>(m_boardBlocks[view.column].Column[lowestEmptyRow], lowestEmptyRow));
+            yield return new WaitForSeconds(0.4f);
           }
         }
       }
+
+      // Wait a little before processing merged blocks again
+
+      // foreach (var block in blocksToRecheck)
+      // {
+      //   // Re-run landing merge logic on blocks that moved
+      //   StartCoroutine(OnBlockLanded(block, block.row));
+      // }
     }
+
     if (activeMergeCheck > 0)
     {
       activeMergeCheck--;

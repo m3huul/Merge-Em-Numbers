@@ -19,7 +19,6 @@ public class BlockView : MonoBehaviour
         m_numText = transform.GetChild(0).GetComponent<TMP_Text>();
         m_image = GetComponent<Image>();
     }
-
     internal void initBlockView(int index)
     {
         Vector3 initPosi = BoardManager.Instance.m_boardBlocks[InputManager.Instance.m_columnIndex].Column[0].boardPosition.position;

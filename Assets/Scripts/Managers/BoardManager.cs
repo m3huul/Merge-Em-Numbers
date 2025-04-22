@@ -22,8 +22,7 @@ public class BoardManager : MonoBehaviour
   private bool initBlock = false;
   private BlockView _currMovingBlock;
   private Tween _currBlockTween;
-  private int activeMergeCheck = 0;
-
+  private List<Coroutine> LandingBlockCoroutines = new();
   void Awake()
   {
     if (Instance == null)
@@ -117,50 +116,38 @@ public class BoardManager : MonoBehaviour
     _currBlockTween = _currMovingBlock.transform.DOLocalMoveY(BlockData.Key.boardPosition.localPosition.y, duration)
     .OnComplete(() =>
     {
-      activeMergeCheck++;
       _currMovingBlock.transform.localPosition = BlockData.Key.boardPosition.localPosition;
-      StartCoroutine(OnBlockLanded(_currMovingBlock, BlockData.Value));
-      StartCoroutine(WaitForGameLoop());
+      Coroutine routine = StartCoroutine(OnBlockLanded(_currMovingBlock, BlockData.Value, InputManager.Instance.m_columnIndex));
+      StartCoroutine(WaitForGame(routine));
     });
   }
 
 
   private void PullTheBlock(float duration, BlockView blockView, KeyValuePair<Block, int> BlockData)
   {
-    activeMergeCheck++;
     blockView.transform.DOLocalMoveY(BlockData.Key.boardPosition.localPosition.y, duration)
     .OnComplete(() =>
     {
       blockView.transform.localPosition = BlockData.Key.boardPosition.localPosition;
-      StartCoroutine(OnBlockLanded(blockView, BlockData.Value, blockView.column));
     });
   }
 
 
-  private IEnumerator WaitForGameLoop()
+  private IEnumerator WaitForGame(Coroutine routine)
   {
-    while (activeMergeCheck != 0)
-    {
-      yield return null;
-    }
+    yield return routine;
     SetupBlock();
   }
 
-  internal IEnumerator OnBlockLanded(BlockView landedBlock, int rowIndex, int col = -1)
+  internal IEnumerator OnBlockLanded(BlockView landedBlock ,int rowIndex, int colIndex = -1)
   {
-    int colIndex;
-    if(col == -1)
-      colIndex = InputManager.Instance.m_columnIndex;
-    else
-      colIndex=col;
-
     _currMovingBlock.OnLand(rowIndex, colIndex);
     m_boardBlocks[colIndex].Column[rowIndex].value = landedBlock.blockData.value;
-    bool downwardMerge = false;
     yield return new WaitForSeconds(0.4f);
 
     // 🔹 Downward Merge
-    while (rowIndex < m_boardBlocks[colIndex].Column.Count - 1 &&
+    bool downwardMerge = false;
+    if (rowIndex < m_boardBlocks[colIndex].Column.Count - 1 &&
         m_boardBlocks[colIndex].Column[rowIndex + 1].value == landedBlock.blockData.value)
     {
       Debug.Log("RowIndex in downward merge : " + rowIndex);
@@ -170,10 +157,8 @@ public class BoardManager : MonoBehaviour
       {
         int newValue = landedBlock.blockData.value * 2;
         CheckAndExpandNumbers(newValue);
-
         yield return belowBlock.MergeBlock(landedBlock);
         BlockViews.Remove(landedBlock);
-
         m_boardBlocks[colIndex].Column[rowIndex + 1].value = newValue;
         m_boardBlocks[colIndex].Column[rowIndex].value = 0;
         rowIndex++;
@@ -199,10 +184,10 @@ public class BoardManager : MonoBehaviour
       rightBool = true;
     }
     int newVal = 0;
-    bool merged = false;
+    bool leftRightMerged = false;
     if (leftBool && rightBool)
     {
-      merged = true;
+      leftRightMerged = true;
       newVal = landedBlock.blockData.value * 4;
       CheckAndExpandNumbers(newVal);
       CheckAndExpandNumbers(landedBlock.blockData.value * 2);
@@ -214,7 +199,7 @@ public class BoardManager : MonoBehaviour
     }
     else if (leftBool)
     {
-      merged = true;
+      leftRightMerged = true;
       newVal = landedBlock.blockData.value * 2;
       CheckAndExpandNumbers(newVal);
       yield return landedBlock.MergeBlock(leftBlock, true);
@@ -223,7 +208,7 @@ public class BoardManager : MonoBehaviour
     }
     else if (rightBool)
     {
-      merged = true;
+      leftRightMerged = true;
       newVal = landedBlock.blockData.value * 2;
       CheckAndExpandNumbers(newVal);
       yield return landedBlock.MergeBlock(rightBlock, true);
@@ -231,13 +216,10 @@ public class BoardManager : MonoBehaviour
       m_boardBlocks[rightBlock.column].Column[rightBlock.row].value = 0;
     }
 
-    if (merged)
+    if (leftRightMerged)
     {
       yield return new WaitForSeconds(0.4f);
       m_boardBlocks[colIndex].Column[rowIndex].value = newVal;
-
-      List<IEnumerator> coroutines = new();
-      // List<BlockView> blocksToRecheck = new();
 
       foreach (BlockView view in BlockViews.ToList())
       {
@@ -256,37 +238,19 @@ public class BoardManager : MonoBehaviour
 
           if (lowestEmptyRow != -1 && lowestEmptyRow > view.row)
           {
-            // Update old position
-            m_boardBlocks[view.column].Column[view.row].value = 0;
-
-            // Update view position data
-            view.row = lowestEmptyRow;
-
-            // Update new position
-            m_boardBlocks[view.column].Column[lowestEmptyRow].value = view.blockData.value;
-
-            // Add to recheck list
-            // blocksToRecheck.Add(view);
-
-            // Pull block and wait until it lands
-            PullTheBlock(0.1f, view, new KeyValuePair<Block, int>(m_boardBlocks[view.column].Column[lowestEmptyRow], lowestEmptyRow));
+            
+            m_boardBlocks[view.column].Column[view.row].value = 0; // Update old position
+            view.row = lowestEmptyRow;  // Update view position data
+            m_boardBlocks[view.column].Column[lowestEmptyRow].value = view.blockData.value; // Update new position
+            PullTheBlock(0.1f, view, new KeyValuePair<Block, int>(m_boardBlocks[view.column].Column[lowestEmptyRow], lowestEmptyRow));  // Pull block and wait until it lands
             yield return new WaitForSeconds(0.4f);
           }
         }
       }
 
-      // Wait a little before processing merged blocks again
-
-      // foreach (var block in blocksToRecheck)
-      // {
-      //   // Re-run landing merge logic on blocks that moved
-      //   StartCoroutine(OnBlockLanded(block, block.row));
-      // }
-    }
-
-    if (activeMergeCheck > 0)
-    {
-      activeMergeCheck--;
+      foreach(BlockView view in BlockViews){
+        yield return OnBlockLanded(view, view.row, view.column);
+      }
     }
   }
 

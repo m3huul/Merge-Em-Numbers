@@ -4,6 +4,7 @@ using UnityEngine;
 using DG.Tweening;
 using System.Collections;
 using System.Linq;
+using System.Security.Cryptography;
 
 public class BoardManager : MonoBehaviour
 {
@@ -145,28 +146,31 @@ public class BoardManager : MonoBehaviour
     m_boardBlocks[colIndex].Column[rowIndex].value = landedBlock.blockData.value;
     yield return new WaitForSeconds(0.4f);
 
+    int newVal = 0;
+    HashSet<int> affectedColumns = new HashSet<int>();
+    bool merged = false;
     // 🔹 Downward Merge
-    bool downwardMerge = false;
     if (rowIndex < m_boardBlocks[colIndex].Column.Count - 1 &&
         m_boardBlocks[colIndex].Column[rowIndex + 1].value == landedBlock.blockData.value)
     {
       Debug.Log("RowIndex in downward merge : " + rowIndex);
-      downwardMerge = true;
+      merged = true;
       BlockView belowBlock = GetBlockViewAt(colIndex, rowIndex + 1);
       if (belowBlock != null)
       {
-        int newValue = landedBlock.blockData.value * 2;
-        CheckAndExpandNumbers(newValue);
+        newVal = landedBlock.blockData.value * 2;
+        CheckAndExpandNumbers(newVal);
         yield return belowBlock.MergeBlock(landedBlock);
         BlockViews.Remove(landedBlock);
-        m_boardBlocks[colIndex].Column[rowIndex + 1].value = newValue;
+        m_boardBlocks[colIndex].Column[rowIndex + 1].value = newVal;
         m_boardBlocks[colIndex].Column[rowIndex].value = 0;
         rowIndex++;
         landedBlock = BlockViews.FirstOrDefault(v => v.row == rowIndex && v.column == colIndex);
+        affectedColumns.Add(colIndex);
       }
     }
 
-    if(downwardMerge)
+    if(merged)
       yield return new WaitForSeconds(0.4f);
 
     BlockView leftBlock = GetBlockViewAt(colIndex - 1, rowIndex);
@@ -183,14 +187,14 @@ public class BoardManager : MonoBehaviour
       Debug.Log("called right bool, right val: " + rightBlock.blockData.value + " and curr block val: " + landedBlock.blockData.value);
       rightBool = true;
     }
-    int newVal = 0;
-    bool leftRightMerged = false;
     if (leftBool && rightBool)
     {
-      leftRightMerged = true;
+      merged = true;
       newVal = landedBlock.blockData.value * 4;
       CheckAndExpandNumbers(newVal);
       CheckAndExpandNumbers(landedBlock.blockData.value * 2);
+      affectedColumns.Add(leftBlock.column);
+      affectedColumns.Add(rightBlock.column);
       yield return landedBlock.MergeBlock(leftBlock, rightBlock);
       BlockViews.Remove(leftBlock);
       BlockViews.Remove(rightBlock);
@@ -199,8 +203,9 @@ public class BoardManager : MonoBehaviour
     }
     else if (leftBool)
     {
-      leftRightMerged = true;
+      merged = true;
       newVal = landedBlock.blockData.value * 2;
+      affectedColumns.Add(leftBlock.column);
       CheckAndExpandNumbers(newVal);
       yield return landedBlock.MergeBlock(leftBlock, true);
       BlockViews.Remove(leftBlock);
@@ -208,49 +213,66 @@ public class BoardManager : MonoBehaviour
     }
     else if (rightBool)
     {
-      leftRightMerged = true;
+      merged = true;
       newVal = landedBlock.blockData.value * 2;
+      affectedColumns.Add(rightBlock.column);
       CheckAndExpandNumbers(newVal);
       yield return landedBlock.MergeBlock(rightBlock, true);
       BlockViews.Remove(rightBlock);
       m_boardBlocks[rightBlock.column].Column[rightBlock.row].value = 0;
     }
 
-    if (leftRightMerged)
+    if (merged)
     {
       yield return new WaitForSeconds(0.4f);
       m_boardBlocks[colIndex].Column[rowIndex].value = newVal;
 
-      foreach (BlockView view in BlockViews.ToList())
+      foreach (int col in affectedColumns)
       {
-        if (view == null) continue;
-
-        if (view.row < m_boardBlocks[view.column].Column.Count - 1)
+        for (int i = m_boardBlocks[col].Column.Count - 1; i >= 0; i--)
         {
-          int lowestEmptyRow = -1;
-          for (int i = 0; i < m_boardBlocks[view.column].Column.Count; i++)
+          if (m_boardBlocks[col].Column[i - 1] != null && m_boardBlocks[col].Column[i - 1].value != 0)
           {
-            if (m_boardBlocks[view.column].Column[i].value == 0)
-            {
-              lowestEmptyRow = i;
-            }
+            continue;
           }
-
-          if (lowestEmptyRow != -1 && lowestEmptyRow > view.row)
+          else
           {
             
-            m_boardBlocks[view.column].Column[view.row].value = 0; // Update old position
-            view.row = lowestEmptyRow;  // Update view position data
-            m_boardBlocks[view.column].Column[lowestEmptyRow].value = view.blockData.value; // Update new position
-            PullTheBlock(0.1f, view, new KeyValuePair<Block, int>(m_boardBlocks[view.column].Column[lowestEmptyRow], lowestEmptyRow));  // Pull block and wait until it lands
-            yield return new WaitForSeconds(0.4f);
           }
         }
       }
 
-      foreach(BlockView view in BlockViews){
-        yield return OnBlockLanded(view, view.row, view.column);
-      }
+      // foreach (BlockView view in BlockViews.ToList())
+      // {
+      //   if (view == null) continue;
+
+      //   if (view.row < m_boardBlocks[view.column].Column.Count - 1)
+      //   {
+      //     int lowestEmptyRow = -1;
+      //     for (int i = 0; i < m_boardBlocks[view.column].Column.Count; i++)
+      //     {
+      //       if (m_boardBlocks[view.column].Column[i].value == 0)
+      //       {
+      //         lowestEmptyRow = i;
+      //       }
+      //     }
+
+      //     if (lowestEmptyRow != -1 && lowestEmptyRow > view.row)
+      //     {
+
+      //       m_boardBlocks[view.column].Column[view.row].value = 0; // Update old position
+      //       view.row = lowestEmptyRow;  // Update view position data
+      //       m_boardBlocks[view.column].Column[lowestEmptyRow].value = view.blockData.value; // Update new position
+      //       PullTheBlock(0.1f, view, new KeyValuePair<Block, int>(m_boardBlocks[view.column].Column[lowestEmptyRow], lowestEmptyRow));  // Pull block and wait until it lands
+      //       yield return new WaitForSeconds(0.4f);
+      //     }
+      //   }
+      // }
+
+      // foreach(BlockView view in BlockViews){
+      //   yield return OnBlockLanded(view, view.row, view.column);
+      // }
+
     }
   }
 

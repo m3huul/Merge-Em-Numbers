@@ -311,15 +311,15 @@ public class BoardBlocks
   public List<Block> Column = new();
 }
 
-[Serializable]
-public class Block
-{
-  public int value;
-  public Transform boardPosition;
+// [Serializable]
+// public class Block
+// {
+//   public int value;
+//   public Transform boardPosition;
 
-  public Block()
-  {
-    value = 0;
-    boardPosition = null;
-  }
-}
+//   public Block()
+//   {
+//     value = 0;
+//     boardPosition = null;
+//   }
+// }

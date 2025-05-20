@@ -3,26 +3,21 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using System.Collections;
-using System.Linq;
 
 public class BoardManager : MonoBehaviour
 {
   public static BoardManager Instance;
-  [SerializeField] internal List<BoardBlocks> m_boardBlocks = new();
   [SerializeField] internal List<int> BlockNumbers = new();
   [SerializeField] internal List<Color> BlockColors = new();
   [SerializeField] internal Gradient colorGradient;
-  [SerializeField] private List<BlockView> BlockViews = new();
-  [SerializeField] private Transform m_newBlocksParent;
-  [SerializeField] private GameObject m_blockPrefab;
-  [SerializeField] private float basePullDownSpeed = 15f;
+  [SerializeField] internal float basePullDownSpeed = 15f;
   [SerializeField] internal float fastPullDownSpeed = 0.2f;
-  [SerializeField] private int predictiedValue = 0;
-  [SerializeField] private BlockView predictedBlock;
-  private bool initBlock = false;
-  private BlockView _currMovingBlock;
-  private Tween _currBlockTween;
-  private List<Coroutine> LandingBlockCoroutines = new();
+  [SerializeField] private float fallDuration = 0.2f;
+  private Tween CurrBlockTween;
+
+  private bool didDownwardMerge = false;
+  private bool didSideMerge = false;
+
   void Awake()
   {
     if (Instance == null)
@@ -39,7 +34,6 @@ public class BoardManager : MonoBehaviour
       BlockColors.Add(GetColorForValue(newValue));
       BlockNumbers.Add(newValue);
     }
-    SetupBlock();
   }
 
   int GenerateNextNumber()
@@ -76,250 +70,136 @@ public class BoardManager : MonoBehaviour
     }
   }
 
-  void SetupBlock()
+  internal IEnumerator PullTheBlock(Block BlockToPull, float duration)
   {
-    if (!initBlock)
+    BlockData BlockData = GridManager.Instance.GetMovableBlockData(InputManager.Instance.IColumnIndex);
+    if (BlockData == null)
     {
-      initBlock = true;
-      // predictiedValue = 0;
-      predictiedValue = UnityEngine.Random.Range(0, 4);
-      // predictiedValue = UnityEngine.Random.Range(0, BlockNumbers.Count);
-    }
-
-    int randomIndex = predictiedValue; // Use the predicted value
-    predictiedValue = 0; // Generate next prediction
-    predictiedValue = UnityEngine.Random.Range(0, 4); // Generate next prediction
-    // predictiedValue = UnityEngine.Random.Range(0, BlockNumbers.Count); // Generate next prediction
-
-    predictedBlock.SetPredictedValue(predictiedValue);
-
-    GameObject FirstBlock = Instantiate(m_blockPrefab, m_boardBlocks[2].Column[0].boardPosition.position, Quaternion.identity, m_newBlocksParent);
-    _currMovingBlock = FirstBlock.GetComponent<BlockView>();
-    _currMovingBlock.initBlockView(randomIndex);
-
-    StartCoroutine(PullTheBlock(basePullDownSpeed));
-
-    InputManager.Instance.setBlock(_currMovingBlock);
-    BlockViews.Add(_currMovingBlock);
-  }
-
-
-  internal IEnumerator PullTheBlock(float duration)
-  {
-    KeyValuePair<Block, int> BlockData = GetMovableBlock();
-    if (BlockData.Key == null)
-    {
-      Debug.Log("Game Over - No available space!");
+      Debug.LogError("Game Over - No available space!");
       yield break;
     }
-    _currBlockTween?.Kill();
-    _currBlockTween = _currMovingBlock.transform.DOLocalMoveY(BlockData.Key.boardPosition.localPosition.y, duration)
+    CurrBlockTween?.Kill();
+    CurrBlockTween = BlockToPull.transform.DOLocalMoveY(BlockData.boardPosition.localPosition.y, duration)
     .OnComplete(() =>
     {
-      _currMovingBlock.transform.localPosition = BlockData.Key.boardPosition.localPosition;
-      Coroutine routine = StartCoroutine(OnBlockLanded(_currMovingBlock, BlockData.Value, InputManager.Instance.m_columnIndex));
-      StartCoroutine(WaitForGame(routine));
+      BlockToPull.transform.localPosition = BlockData.boardPosition.localPosition;
+      GridManager.Instance.SetBlockData(BlockToPull, BlockData.gridPosition);
+      StartCascade();
     });
   }
 
-
-  private void PullTheBlock(float duration, BlockView blockView, KeyValuePair<Block, int> BlockData)
+  internal IEnumerator PullTheBlock(Block BlockToPull, BlockData MoveToBlock, float duration)
   {
-    blockView.transform.DOLocalMoveY(BlockData.Key.boardPosition.localPosition.y, duration)
-    .OnComplete(() =>
-    {
-      blockView.transform.localPosition = BlockData.Key.boardPosition.localPosition;
-    });
+    yield return BlockToPull.transform.DOLocalMoveY(MoveToBlock.boardPosition.localPosition.y, duration).WaitForCompletion();
+    GridManager.Instance.SetBlockData(BlockToPull, MoveToBlock.gridPosition);
   }
 
-
-  private IEnumerator WaitForGame(Coroutine routine)
+  public void StartCascade()
   {
-    yield return routine;
-    SetupBlock();
+    StartCoroutine(CascadeRoutine());
   }
 
-  internal IEnumerator OnBlockLanded(BlockView landedBlock ,int rowIndex, int colIndex = -1)
+  private IEnumerator CascadeRoutine()
   {
-    _currMovingBlock.OnLand(rowIndex, colIndex);
-    m_boardBlocks[colIndex].Column[rowIndex].value = landedBlock.blockData.value;
-    yield return new WaitForSeconds(0.4f);
+    bool keepCascading = true;
 
-    // 🔹 Downward Merge
-    bool downwardMerge = false;
-    if (rowIndex < m_boardBlocks[colIndex].Column.Count - 1 &&
-        m_boardBlocks[colIndex].Column[rowIndex + 1].value == landedBlock.blockData.value)
+    while (keepCascading)
     {
-      Debug.Log("RowIndex in downward merge : " + rowIndex);
-      downwardMerge = true;
-      BlockView belowBlock = GetBlockViewAt(colIndex, rowIndex + 1);
-      if (belowBlock != null)
+      yield return GridManager.Instance.MoveAllBlocksDown();
+
+      yield return new WaitForSeconds(fallDuration); // Wait before merge
+
+      didDownwardMerge = false;
+      yield return HandleDownwardMerges();
+      yield return new WaitForSeconds(fallDuration);
+
+      didSideMerge = false;
+      yield return HandleSideMerges();
+      yield return new WaitForSeconds(fallDuration);
+
+      keepCascading = didDownwardMerge || didSideMerge;
+    }
+
+    yield return new WaitForSeconds(fallDuration);
+
+    SpawnManager.Instance.SpawnNextBlock();
+  }
+
+  private IEnumerator HandleDownwardMerges()
+  {
+    bool didMerge = false;
+
+    for (int x = 0; x < GridManager.Instance.BlockGrid.Count; x++)
+    {
+      for (int y = GridManager.Instance.BlockGrid[x].Column.Count - 1; y >= 0; y--)
       {
-        int newValue = landedBlock.blockData.value * 2;
-        CheckAndExpandNumbers(newValue);
-        yield return belowBlock.MergeBlock(landedBlock);
-        BlockViews.Remove(landedBlock);
-        m_boardBlocks[colIndex].Column[rowIndex + 1].value = newValue;
-        m_boardBlocks[colIndex].Column[rowIndex].value = 0;
-        rowIndex++;
-        landedBlock = BlockViews.FirstOrDefault(v => v.row == rowIndex && v.column == colIndex);
-      }
-    }
+        Vector2Int currPos = new Vector2Int(x, y);
+        Vector2Int belowPos = new Vector2Int(x, y + 1);
 
-    if(downwardMerge)
-      yield return new WaitForSeconds(0.4f);
+        if (!GridManager.Instance.IsValidPosition(currPos) || !GridManager.Instance.IsValidPosition(belowPos))
+          continue;
 
-    BlockView leftBlock = GetBlockViewAt(colIndex - 1, rowIndex);
-    BlockView rightBlock = GetBlockViewAt(colIndex + 1, rowIndex);
-    bool leftBool = false;
-    bool rightBool = false;
-    if (leftBlock != null && leftBlock.blockData.value == landedBlock.blockData.value)
-    {
-      Debug.Log("called left bool, left val: " + leftBlock.blockData.value + " and curr block val: " + landedBlock.blockData.value);
-      leftBool = true;
-    }
-    if (rightBlock != null && rightBlock.blockData.value == landedBlock.blockData.value)
-    {
-      Debug.Log("called right bool, right val: " + rightBlock.blockData.value + " and curr block val: " + landedBlock.blockData.value);
-      rightBool = true;
-    }
-    int newVal = 0;
-    bool leftRightMerged = false;
-    if (leftBool && rightBool)
-    {
-      leftRightMerged = true;
-      newVal = landedBlock.blockData.value * 4;
-      CheckAndExpandNumbers(newVal);
-      CheckAndExpandNumbers(landedBlock.blockData.value * 2);
-      yield return landedBlock.MergeBlock(leftBlock, rightBlock);
-      BlockViews.Remove(leftBlock);
-      BlockViews.Remove(rightBlock);
-      m_boardBlocks[leftBlock.column].Column[leftBlock.row].value = 0;
-      m_boardBlocks[rightBlock.column].Column[rightBlock.row].value = 0;
-    }
-    else if (leftBool)
-    {
-      leftRightMerged = true;
-      newVal = landedBlock.blockData.value * 2;
-      CheckAndExpandNumbers(newVal);
-      yield return landedBlock.MergeBlock(leftBlock, true);
-      BlockViews.Remove(leftBlock);
-      m_boardBlocks[leftBlock.column].Column[leftBlock.row].value = 0;
-    }
-    else if (rightBool)
-    {
-      leftRightMerged = true;
-      newVal = landedBlock.blockData.value * 2;
-      CheckAndExpandNumbers(newVal);
-      yield return landedBlock.MergeBlock(rightBlock, true);
-      BlockViews.Remove(rightBlock);
-      m_boardBlocks[rightBlock.column].Column[rightBlock.row].value = 0;
-    }
+        var blockAbove = GridManager.Instance.GetBlockData(currPos);
+        var blockBelow = GridManager.Instance.GetBlockData(belowPos);
 
-    if (leftRightMerged)
-    {
-      yield return new WaitForSeconds(0.4f);
-      m_boardBlocks[colIndex].Column[rowIndex].value = newVal;
-
-      foreach (BlockView view in BlockViews.ToList())
-      {
-        if (view == null) continue;
-
-        if (view.row < m_boardBlocks[view.column].Column.Count - 1)
+        if (blockAbove != null && blockBelow != null && blockAbove.value == blockBelow.value)
         {
-          int lowestEmptyRow = -1;
-          for (int i = 0; i < m_boardBlocks[view.column].Column.Count; i++)
-          {
-            if (m_boardBlocks[view.column].Column[i].value == 0)
-            {
-              lowestEmptyRow = i;
-            }
-          }
-
-          if (lowestEmptyRow != -1 && lowestEmptyRow > view.row)
-          {
-            
-            m_boardBlocks[view.column].Column[view.row].value = 0; // Update old position
-            view.row = lowestEmptyRow;  // Update view position data
-            m_boardBlocks[view.column].Column[lowestEmptyRow].value = view.blockData.value; // Update new position
-            PullTheBlock(0.1f, view, new KeyValuePair<Block, int>(m_boardBlocks[view.column].Column[lowestEmptyRow], lowestEmptyRow));  // Pull block and wait until it lands
-            yield return new WaitForSeconds(0.4f);
-          }
+          yield return GridManager.Instance.BlockList.Find(b => b.GridPos == currPos).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == belowPos));
+          didMerge = true;
+          yield return new WaitForSeconds(fallDuration);
         }
       }
-
-      foreach(BlockView view in BlockViews){
-        yield return OnBlockLanded(view, view.row, view.column);
-      }
     }
+
+    didDownwardMerge = didMerge;
   }
 
 
-  private BlockView GetBlockViewAt(int col, int row)
+  private IEnumerator HandleSideMerges()
   {
-    if (col < 0 || col >= m_boardBlocks.Count) return null;
+    bool didMerge = false;
 
-    foreach (BlockView view in BlockViews)
+    for (int y = 0; y < GridManager.Instance.BlockGrid[0].Column.Count; y++)
     {
-      if (view.column == col && view.row == row)
+      for (int x = 0; x < GridManager.Instance.BlockGrid.Count - 1; x++)
       {
-        return view;
+        Vector2Int leftPos = new Vector2Int(x - 1, y);
+        Vector2Int rightPos = new Vector2Int(x + 1, y);
+
+        if (!GridManager.Instance.IsValidPosition(leftPos) || !GridManager.Instance.IsValidPosition(rightPos))
+          continue;
+
+        var leftBlock = GridManager.Instance.GetBlockData(leftPos);
+        var rightBlock = GridManager.Instance.GetBlockData(rightPos);
+        var middleBlock = GridManager.Instance.GetBlockData(new Vector2Int(x, y));
+
+        if (middleBlock == null)
+          continue;
+
+        if (leftBlock != null && rightBlock != null && rightBlock.value == middleBlock.value && leftBlock.value == middleBlock.value)
+        {
+          yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == leftBlock.gridPosition), GridManager.Instance.BlockList.Find(b => b.GridPos == rightBlock.gridPosition));
+          didMerge = true;
+          yield return new WaitForSeconds(fallDuration);
+          continue;
+        }
+        if (leftBlock != null && rightBlock == null && leftBlock.value == middleBlock.value)
+        {
+          yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == leftBlock.gridPosition));
+          didMerge = true;
+          yield return new WaitForSeconds(fallDuration);
+          continue;
+        }
+        if (leftBlock == null && rightBlock != null && rightBlock.value == middleBlock.value)
+        {
+          yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == rightBlock.gridPosition));
+          didMerge = true;
+          yield return new WaitForSeconds(fallDuration);
+          continue;
+        }
       }
     }
-    return null;
-  }
-
-  KeyValuePair<Block, int> GetMovableBlock()
-  {
-    for (int i = m_boardBlocks[InputManager.Instance.m_columnIndex].Column.Count - 1; i >= 0; i--)
-    {
-      int val = m_boardBlocks[InputManager.Instance.m_columnIndex].Column[i].value;
-      if (val == 0)
-      {
-        return new KeyValuePair<Block, int>(m_boardBlocks[InputManager.Instance.m_columnIndex].Column[i], i);
-      }
-    }
-    return new KeyValuePair<Block, int>(null, 0);
-  }
-
-  KeyValuePair<Block, int> GetMovableBlock(int col, int row)
-  {
-    Block block = null;
-    int Row = 0;
-    for (int i = row + 1; i < m_boardBlocks[col].Column.Count - 1; i++)
-    {
-      if (m_boardBlocks[col].Column[i].value == 0)
-      {
-        block = m_boardBlocks[col].Column[i];
-        Row = i;
-      }
-    }
-    if (block != null)
-    {
-      return new KeyValuePair<Block, int>(block, Row);
-    }
-    else
-    {
-      return new KeyValuePair<Block, int>(null, 0);
-    }
+    didSideMerge = didMerge;
   }
 }
 
-[Serializable]
-public class BoardBlocks
-{
-  public List<Block> Column = new();
-}
-
-// [Serializable]
-// public class Block
-// {
-//   public int value;
-//   public Transform boardPosition;
-
-//   public Block()
-//   {
-//     value = 0;
-//     boardPosition = null;
-//   }
-// }

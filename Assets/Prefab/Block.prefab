@@ -11,9 +11,9 @@ GameObject:
   - component: {fileID: 9103932446411067343}
   - component: {fileID: 5471539412739183736}
   - component: {fileID: 9014065440090820313}
-  - component: {fileID: 3062556184981639312}
+  - component: {fileID: 8110008378500762323}
   m_Layer: 5
-  m_Name: Cell
+  m_Name: Block
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -77,7 +77,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &3062556184981639312
+--- !u!114 &8110008378500762323
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -86,15 +86,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 2474122655813564630}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c6cc07d3017293b4180f6a91a53d5dc6, type: 3}
+  m_Script: {fileID: 11500000, guid: 648e9085daa774409aa45012bfb62f4f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  startPosiOffset: 200
-  blockData:
-    value: 0
-    boardPosition: {fileID: 0}
-  row: 0
-  column: 0
+  Value: 0
+  startPosiYOffset: 100
+  boardPosition: {fileID: 0}
 --- !u!1 &7820189630558202863
 GameObject:
   m_ObjectHideFlags: 0

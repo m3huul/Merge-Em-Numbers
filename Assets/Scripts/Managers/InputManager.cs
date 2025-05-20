@@ -4,8 +4,8 @@ using UnityEngine.EventSystems;
 public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
 {
   public static InputManager Instance;
-  [SerializeField] internal int m_columnIndex = 2;
-  [SerializeField] private BlockView m_blockTransform;
+  [SerializeField] internal int IColumnIndex = 2;
+  [SerializeField] private Transform BlockTransform;
 
   void Awake()
   {
@@ -14,9 +14,9 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
       Instance = this;
     }
   }
-  internal void setBlock(BlockView block)
+  internal void setBlock(Transform blockTransform)
   {
-    m_blockTransform = block;
+    BlockTransform = blockTransform;
   }
 
   public void OnPointerDown(PointerEventData eventData)
@@ -25,10 +25,10 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
   }
   public void OnPointerUp(PointerEventData eventData)
   {
-    if (m_blockTransform)
+    if (BlockTransform)
     {
-      m_blockTransform = null;
-      StartCoroutine(BoardManager.Instance.PullTheBlock(BoardManager.Instance.fastPullDownSpeed));
+      BlockTransform = null;
+      StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BoardManager.Instance.fastPullDownSpeed));
     }
   }
 
@@ -39,16 +39,16 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
 
   private void OnUserInput(PointerEventData eventData)
   {
-    if (m_blockTransform != null)
+    if (BlockTransform != null)
     {
-      Transform closestColumnPosition = BoardManager.Instance.m_boardBlocks[FindClosestColumnIndex(eventData.position.x)].Column[0].boardPosition;
+      Transform closestColumnPosition = GridManager.Instance.BlockGrid[FindClosestColumnIndex(eventData.position.x)].Column[0].boardPosition;
 
       // Move the block to the closest column's X position if found
       if (closestColumnPosition != null)
       {
-        Vector3 targetPosition = m_blockTransform.transform.position;
+        Vector3 targetPosition = BlockTransform.position;
         targetPosition.x = closestColumnPosition.position.x;
-        m_blockTransform.transform.position = targetPosition;
+        BlockTransform.position = targetPosition;
       }
     }
   }
@@ -58,9 +58,9 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
     float closestDistance = float.MaxValue;
     int closestIndex = 0;
 
-    for (int i = 0; i < BoardManager.Instance.m_boardBlocks.Count; i++)
+    for (int i = 0; i < GridManager.Instance.BlockGrid.Count; i++)
     {
-      float columnX = BoardManager.Instance.m_boardBlocks[i].Column[0].boardPosition.position.x;
+      float columnX = GridManager.Instance.BlockGrid[i].Column[0].boardPosition.position.x;
       float distance = Mathf.Abs(xPosition - columnX);
 
       if (distance < closestDistance)
@@ -69,7 +69,7 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
         closestIndex = i;
       }
     }
-    m_columnIndex = closestIndex;
+    IColumnIndex = closestIndex;
     return closestIndex;
   }
 }

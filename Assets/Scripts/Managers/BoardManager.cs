@@ -4,7 +4,7 @@ using UnityEngine;
 using DG.Tweening;
 using System.Collections;
 using System.Linq;
-using System.Security.Cryptography;
+using System.Data;
 
 public class BoardManager : MonoBehaviour
 {
@@ -124,12 +124,12 @@ public class BoardManager : MonoBehaviour
   }
 
 
-  private void PullTheBlock(float duration, BlockView blockView, KeyValuePair<Block, int> BlockData)
+  private void PullTheBlock(float duration, BlockView blockView, Block blockToMove)
   {
-    blockView.transform.DOLocalMoveY(BlockData.Key.boardPosition.localPosition.y, duration)
+    blockView.transform.DOLocalMoveY(blockToMove.boardPosition.localPosition.y, duration)
     .OnComplete(() =>
     {
-      blockView.transform.localPosition = BlockData.Key.boardPosition.localPosition;
+      blockView.transform.localPosition = blockToMove.boardPosition.localPosition;
     });
   }
 
@@ -140,7 +140,7 @@ public class BoardManager : MonoBehaviour
     SetupBlock();
   }
 
-  internal IEnumerator OnBlockLanded(BlockView landedBlock ,int rowIndex, int colIndex = -1)
+  internal IEnumerator OnBlockLanded(BlockView landedBlock, int rowIndex, int colIndex = -1)
   {
     _currMovingBlock.OnLand(rowIndex, colIndex);
     m_boardBlocks[colIndex].Column[rowIndex].value = landedBlock.blockData.value;
@@ -170,7 +170,7 @@ public class BoardManager : MonoBehaviour
       }
     }
 
-    if(merged)
+    if (merged)
       yield return new WaitForSeconds(0.4f);
 
     BlockView leftBlock = GetBlockViewAt(colIndex - 1, rowIndex);
@@ -227,59 +227,77 @@ public class BoardManager : MonoBehaviour
       yield return new WaitForSeconds(0.4f);
       m_boardBlocks[colIndex].Column[rowIndex].value = newVal;
 
+      List<Dictionary<int, int>> blocksAbove = new List<Dictionary<int, int>>();
       foreach (int col in affectedColumns)
       {
-        for (int i = m_boardBlocks[col].Column.Count - 1; i >= 0; i--)
+        Dictionary<int, int> BlocksAbove = GetBlocksAboveEmptyBlock(col); // row , col
+        blocksAbove.Add(BlocksAbove);
+        foreach (KeyValuePair<int, int> block in BlocksAbove)
         {
-          if (m_boardBlocks[col].Column[i - 1] != null && m_boardBlocks[col].Column[i - 1].value != 0)
+          BlockView view = GetBlockViewAt(block.Value, block.Key);
+          if (view != null)
           {
-            continue;
-          }
-          else
-          {
-            
+            PullTheBlock(fastPullDownSpeed, view, m_boardBlocks[view.column].Column[view.row - 1]);
+            yield return new WaitForSeconds(0.1f);
           }
         }
       }
 
-      // foreach (BlockView view in BlockViews.ToList())
-      // {
-      //   if (view == null) continue;
-
-      //   if (view.row < m_boardBlocks[view.column].Column.Count - 1)
-      //   {
-      //     int lowestEmptyRow = -1;
-      //     for (int i = 0; i < m_boardBlocks[view.column].Column.Count; i++)
-      //     {
-      //       if (m_boardBlocks[view.column].Column[i].value == 0)
-      //       {
-      //         lowestEmptyRow = i;
-      //       }
-      //     }
-
-      //     if (lowestEmptyRow != -1 && lowestEmptyRow > view.row)
-      //     {
-
-      //       m_boardBlocks[view.column].Column[view.row].value = 0; // Update old position
-      //       view.row = lowestEmptyRow;  // Update view position data
-      //       m_boardBlocks[view.column].Column[lowestEmptyRow].value = view.blockData.value; // Update new position
-      //       PullTheBlock(0.1f, view, new KeyValuePair<Block, int>(m_boardBlocks[view.column].Column[lowestEmptyRow], lowestEmptyRow));  // Pull block and wait until it lands
-      //       yield return new WaitForSeconds(0.4f);
-      //     }
-      //   }
-      // }
-
-      // foreach(BlockView view in BlockViews){
-      //   yield return OnBlockLanded(view, view.row, view.column);
-      // }
-
+      foreach (Dictionary<int, int> columnMap in blocksAbove)
+      {
+        foreach (KeyValuePair<int, int> pos in columnMap)
+        {
+          BlockView view = GetBlockViewAt(pos.Value, pos.Key);
+          if (view != null)
+          {
+            if (IsMergeAvailable(pos.Key, pos.Value))
+            {
+              Debug.Log("Merge Available");
+              yield return new WaitForSeconds(0.1f);
+              yield return OnBlockLanded(view, pos.Key, pos.Value);
+              yield break;
+            }
+          }
+        }
+      }
     }
+  }
+
+  bool IsMergeAvailable(int rowIndex, int colIndex)
+  {
+    BlockView blockView = GetBlockViewAt(colIndex, rowIndex);
+    if (!blockView) {
+      return false;
+    }
+
+    bool mergeAvailable = false;
+    BlockView bottomBlock = GetBlockViewAt(colIndex, rowIndex+1);
+    if(bottomBlock && bottomBlock.blockData.value == blockView.blockData.value){
+      Debug.Log("Found Bottom Merge");
+      mergeAvailable = true;
+    }
+
+    BlockView leftBlock = GetBlockViewAt(colIndex - 1, rowIndex);
+    BlockView rightBlock = GetBlockViewAt(colIndex + 1, rowIndex);
+    if (leftBlock != null && leftBlock.blockData.value == blockView.blockData.value)
+    {
+      Debug.Log("Found Left Merge");
+      mergeAvailable = true;
+    }
+    if (rightBlock != null && rightBlock.blockData.value == blockView.blockData.value)
+    {
+      Debug.Log("Found Right Merge");
+      mergeAvailable = true;
+    }
+
+    return mergeAvailable;
   }
 
 
   private BlockView GetBlockViewAt(int col, int row)
   {
     if (col < 0 || col >= m_boardBlocks.Count) return null;
+    if(row < 0 || row >= m_boardBlocks[col].Column.Count) return null;
 
     foreach (BlockView view in BlockViews)
     {
@@ -304,26 +322,40 @@ public class BoardManager : MonoBehaviour
     return new KeyValuePair<Block, int>(null, 0);
   }
 
-  KeyValuePair<Block, int> GetMovableBlock(int col, int row)
+  Dictionary<int, int> GetBlocksAboveEmptyBlock(int col)
   {
-    Block block = null;
-    int Row = 0;
-    for (int i = row + 1; i < m_boardBlocks[col].Column.Count - 1; i++)
+    int rowIndex = -1;
+    for (int i = m_boardBlocks[col].Column.Count - 1; i > 0; i--)
     {
-      if (m_boardBlocks[col].Column[i].value == 0)
+      if (m_boardBlocks[col].Column[i - 1] != null || m_boardBlocks[col].Column[i - 1].value != 0)
       {
-        block = m_boardBlocks[col].Column[i];
-        Row = i;
+        continue;
+      }
+      else
+      {
+        if (m_boardBlocks[col].Column[i].value != 0)
+        {
+          rowIndex = i;
+          break;
+        }
       }
     }
-    if (block != null)
-    {
-      return new KeyValuePair<Block, int>(block, Row);
+
+    Dictionary<int, int> BlocksAbove = new Dictionary<int, int>();
+    // foreach (BlockView view in BlockViews)
+    // {
+    //   if (view.column == col && view.row >= rowIndex)
+    //   {
+    //     BlocksAbove.Add(view.row, view.column);
+    //   }
+    // }
+    for(int i=rowIndex;i>=0;i--){
+      if(m_boardBlocks[col].Column[i].value != 0 && BlockViews.FirstOrDefault(v => v.row == i && v.column == col) != null){
+        BlocksAbove.Add(i, col);
+      }
     }
-    else
-    {
-      return new KeyValuePair<Block, int>(null, 0);
-    }
+    
+    return BlocksAbove;
   }
 }
 

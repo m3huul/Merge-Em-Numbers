@@ -107,15 +107,15 @@ public class BoardManager : MonoBehaviour
     {
       yield return GridManager.Instance.MoveAllBlocksDown();
 
-      yield return new WaitForSeconds(fallDuration); // Wait before merge
+      // yield return new WaitForSeconds(fallDuration); // Wait before merge
 
       didDownwardMerge = false;
-      yield return HandleDownwardMerges();
-      yield return new WaitForSeconds(fallDuration);
+      // yield return HandleDownwardMerges();
+      // yield return new WaitForSeconds(fallDuration);
 
       didSideMerge = false;
-      yield return HandleSideMerges();
-      yield return new WaitForSeconds(fallDuration);
+      // yield return HandleSideMerges();
+      // yield return new WaitForSeconds(fallDuration);
 
       keepCascading = didDownwardMerge || didSideMerge;
     }
@@ -144,6 +144,7 @@ public class BoardManager : MonoBehaviour
 
         if (blockAbove != null && blockBelow != null && blockAbove.value == blockBelow.value)
         {
+          Debug.Log($"Merging {blockAbove.gridPosition} and {blockBelow.gridPosition}");
           yield return GridManager.Instance.BlockList.Find(b => b.GridPos == currPos).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == belowPos));
           didMerge = true;
           yield return new WaitForSeconds(fallDuration);

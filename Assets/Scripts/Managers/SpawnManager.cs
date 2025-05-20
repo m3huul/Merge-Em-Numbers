@@ -46,6 +46,7 @@ public class SpawnManager : MonoBehaviour
     GameObject Block = Instantiate(BlockPrefab, GridManager.Instance.BlockGrid[2].Column[0].boardPosition.position, Quaternion.identity, NewBlocksParent);
     Block blockScript = Block.GetComponent<Block>();
     blockScript.Init(SpawnedBlockIndex);
+    CurrentBlock = blockScript;
   
     StartCoroutine(BoardManager.Instance.PullTheBlock(CurrentBlock, BoardManager.Instance.basePullDownSpeed));
 

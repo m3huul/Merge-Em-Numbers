@@ -1,11 +1,9 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using System;
 using System.Collections;
 using DG.Tweening;
 
-[Serializable]
 public class Block : MonoBehaviour
 {
   [SerializeField] internal int Value;
@@ -33,6 +31,11 @@ public class Block : MonoBehaviour
 
   internal void SetValue(int index)
   {
+    if(index >= BoardManager.Instance.BlockNumbers.Count)
+    {
+      BoardManager.Instance.CheckAndExpandNumbers();
+      return;
+    }
     BlockImage.color = BoardManager.Instance.BlockColors[index];
     Value = BoardManager.Instance.BlockNumbers[index];
     BlockNumberText.text = BoardManager.Instance.BlockNumbers[index].ToString();
@@ -50,7 +53,6 @@ public class Block : MonoBehaviour
       BlockImage.DOFade(0, 0.1f);
       yield return Block.transform.DOLocalMoveY(transform.localPosition.y, 0.1f).WaitForCompletion();
       GridManager.Instance.RemoveBlock(Block.GridPos);
-      Destroy(Block.gameObject);
       Value *= 2;
       GridManager.Instance.SetBlockData(this, GridPos, Value);
       SetValue(BoardManager.Instance.BlockNumbers.IndexOf(Value));
@@ -60,7 +62,6 @@ public class Block : MonoBehaviour
       Block.BlockImage.DOFade(0, 0.1f);
       yield return Block.transform.DOLocalMoveX(transform.localPosition.x, 0.1f).WaitForCompletion();
       GridManager.Instance.RemoveBlock(Block.GridPos);
-      Destroy(Block.gameObject);
       Value *= 2;
       GridManager.Instance.SetBlockData(this, GridPos, Value);
       SetValue(BoardManager.Instance.BlockNumbers.IndexOf(Value));
@@ -73,8 +74,6 @@ public class Block : MonoBehaviour
     BlockImage.DOFade(0, 0.1f);
     Block1.transform.DOLocalMoveX(transform.localPosition.x, 0.1f);
     yield return Block2.transform.DOLocalMoveX(transform.localPosition.x, 0.1f).WaitForCompletion();
-    Destroy(Block1.gameObject);
-    Destroy(Block2.gameObject);
     GridManager.Instance.RemoveBlock(Block1.GridPos);
     GridManager.Instance.RemoveBlock(Block2.GridPos);
     Value *= 4;

@@ -61,7 +61,7 @@ public class GridManager : MonoBehaviour
   
   internal BlockData GetMovableBlockData(int col, int row)
   {
-    for (int i = BlockGrid[col].Column.Count - 1; i > row; i--)
+    for (int i = row; i < height; i++)
     {
       if (IsEmpty(new Vector2Int(col, i)))
       {
@@ -82,6 +82,7 @@ public class GridManager : MonoBehaviour
           BlockData blockData = GetMovableBlockData(i, j);
           if (blockData != null)
           {
+            Debug.Log("Move All Blocks Down Coroutine: " + blockData.gridPosition);
             yield return FoundBlockToPull(blockData);
             yield return new WaitForSeconds(0.2f);
           }
@@ -109,7 +110,8 @@ public class GridManager : MonoBehaviour
 
       if(value != -1)
       {
-        block.SetValue(value);
+        BoardManager.Instance.CheckAndExpandNumbers();
+        block.SetValue(BoardManager.Instance.BlockNumbers.IndexOf(value));
       }
     }
     else
@@ -123,6 +125,15 @@ public class GridManager : MonoBehaviour
     if (IsValidPosition(position))
     {
       BlockGrid[position.x].Column[position.y].value = 0;
+      foreach(var block in BlockList)
+      {
+        if (block.GridPos == position)
+        {
+          BlockList.Remove(block);
+          Destroy(block.gameObject);
+          break;
+        }
+      }
     }
     else
     {

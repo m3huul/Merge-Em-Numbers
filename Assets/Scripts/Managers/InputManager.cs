@@ -17,7 +17,6 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
   internal void setBlock(Transform blockTransform)
   {
     BlockTransform = blockTransform;
-    Debug.Log("BlockTransform set to: " + BlockTransform);
   }
 
   public void OnPointerDown(PointerEventData eventData)

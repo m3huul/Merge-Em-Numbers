@@ -90,8 +90,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Value: 0
-  startPosiYOffset: 100
-  boardPosition: {fileID: 0}
+  startPosiYOffset: 40
 --- !u!1 &7820189630558202863
 GameObject:
   m_ObjectHideFlags: 0

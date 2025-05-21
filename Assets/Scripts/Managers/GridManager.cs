@@ -82,21 +82,20 @@ public class GridManager : MonoBehaviour
           BlockData blockData = GetMovableBlockData(i, j);
           if (blockData != null)
           {
-            Debug.Log("Move All Blocks Down Coroutine: " + blockData.gridPosition);
-            yield return FoundBlockToPull(blockData);
-            yield return new WaitForSeconds(0.2f);
+            Block BlockToMove = BlockList.Find(x => x.GridPos == new Vector2Int(i, j));
+            Vector2Int currPos = BlockToMove.GridPos;
+            if (BlockToMove == null)
+            {
+              Debug.LogError("Block to move is null.");
+              continue;
+            }
+            Debug.Log("Moving block at: " + BlockToMove.GridPos + " to: " + blockData.gridPosition);
+            yield return BoardManager.Instance.PullTheBlock(BlockToMove, blockData, BoardManager.Instance.fastPullDownSpeed);
+            print("Called PullTheBlock");
+            RemoveBlockFromGrid(currPos);
+            // yield return new WaitForSeconds(0.05f);
           }
         }
-      }
-    }
-  }
-
-  IEnumerator FoundBlockToPull(BlockData blockData)
-  {
-    foreach (var block in BlockList) {
-      if(block.GridPos == blockData.gridPosition)
-      {
-        yield return BoardManager.Instance.PullTheBlock(block, blockData, BoardManager.Instance.fastPullDownSpeed);
       }
     }
   }
@@ -119,13 +118,22 @@ public class GridManager : MonoBehaviour
       Debug.LogError("Invalid position while setting block data.");
     }
   }
+  
+  void RemoveBlockFromGrid(Vector2Int position)
+  {
+    if (IsValidPosition(position))
+    {
+      print("Removing block value from grid at: " + position);
+      BlockGrid[position.x].Column[position.y].value = 0;
+    }
+  }
 
   internal void RemoveBlock(Vector2Int position)
   {
     if (IsValidPosition(position))
     {
       BlockGrid[position.x].Column[position.y].value = 0;
-      foreach(var block in BlockList)
+      foreach (var block in BlockList)
       {
         if (block.GridPos == position)
         {

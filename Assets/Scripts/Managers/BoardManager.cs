@@ -17,7 +17,6 @@ public class BoardManager : MonoBehaviour
   private Tween CurrBlockTween;
   private bool didDownwardMerge = false;
   private bool didSideMerge = false;
-  private bool FirstStep = true;
   void Awake()
   {
     if (Instance == null)
@@ -114,7 +113,6 @@ public class BoardManager : MonoBehaviour
 
   public void StartCascade()
   {
-    FirstStep = true;
     StartCoroutine(CascadeRoutine());
   }
 
@@ -247,9 +245,6 @@ public class BoardManager : MonoBehaviour
     Vector2Int leftPos = new Vector2Int(x - 1, y);
     Vector2Int rightPos = new Vector2Int(x + 1, y);
 
-    if (!GridManager.Instance.IsValidPosition(leftPos) || !GridManager.Instance.IsValidPosition(rightPos))
-      yield break;
-
     if (GridManager.Instance.IsEmpty(leftPos) && GridManager.Instance.IsEmpty(rightPos))
       yield break;
 
@@ -257,10 +252,10 @@ public class BoardManager : MonoBehaviour
     var rightBlock = GridManager.Instance.GetBlockData(rightPos);
     var middleBlock = GridManager.Instance.GetBlockData(new Vector2Int(x, y));
 
-    if (rightBlock.value == middleBlock.value && leftBlock.value == middleBlock.value)
+    if (rightBlock?.value == middleBlock?.value && leftBlock?.value == middleBlock?.value)
     {
       Debug.Log("Merging left and right");
-      Debug.Log("Merging " + middleBlock.gridPosition + " and " + leftBlock.gridPosition + " and " + rightBlock.gridPosition);
+      Debug.Log("Merging " + middleBlock?.gridPosition + " and " + leftBlock?.gridPosition + " and " + rightBlock?.gridPosition);
       yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == leftBlock.gridPosition), GridManager.Instance.BlockList.Find(b => b.GridPos == rightBlock.gridPosition));
       didSideMerge = true;
       yield return new WaitForSeconds(fallDuration);

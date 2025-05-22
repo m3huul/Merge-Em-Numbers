@@ -151,7 +151,15 @@ public class GridManager : MonoBehaviour
 
   internal bool IsEmpty(Vector2Int position)
   {
-    return BlockGrid[position.x].Column[position.y].value == 0;
+    if (IsValidPosition(position))
+    {
+      return BlockGrid[position.x].Column[position.y].value == 0;
+    }
+    else
+    {
+      // Debug.LogError("Invalid position while checking if empty.");
+      return true;
+    }
   }
   
   internal bool IsValidPosition(Vector2Int position)

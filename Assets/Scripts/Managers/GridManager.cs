@@ -42,23 +42,23 @@ public class GridManager : MonoBehaviour
     }
     else
     {
-      Debug.LogError("Invalid position while getting block data.");
+      // Debug.LogError("Invalid position while getting block data.");
       return null;
     }
   }
 
-  internal BlockData GetMovableBlockData(int col)
+  internal BlockData GetMovableBlockData(Transform currentBlockTransform, int col)
   {
     for (int i = BlockGrid[col].Column.Count - 1; i >= 0; i--)
     {
-      if (IsEmpty(new Vector2Int(col, i)))
+      if (IsEmpty(new Vector2Int(col, i)) && currentBlockTransform.position.y >= BlockGrid[col].Column[i].boardPosition.position.y+80f)
       {
         return BlockGrid[col].Column[i];
       }
     }
     return null;
   }
-  
+
   internal BlockData GetMovableBlockData(int col, int row)
   {
     for (int i = row; i < height; i++)
@@ -69,6 +69,34 @@ public class GridManager : MonoBehaviour
       }
     }
     return null;
+  }
+
+  internal BlockData GetPullableBlockData(Transform currentBlockPosition, int currCol, int colToMoveTo)
+  {
+    // for (int i = currCol + 1; i <= colToMoveTo; i++)
+    // {
+    //   BlockData blockData = GetMovableBlockData(currentBlockPosition, i);
+    //   if (blockData != null)
+    //   {
+    //     return blockData;
+    //   }
+    // }
+
+    // for (int i = currCol - 1; i >= colToMoveTo; i--)
+    // {
+    //   BlockData blockData = GetMovableBlockData(currentBlockPosition, i);
+    //   if (blockData != null)
+    //   {
+    //     return blockData;
+    //   }
+    // }
+    BlockData blockData = GetMovableBlockData(currentBlockPosition, colToMoveTo);
+    if (blockData != null)
+    {
+      return blockData;
+    }
+
+    return GetMovableBlockData(currentBlockPosition, currCol);
   }
 
   internal IEnumerator MoveAllBlocksDown()
@@ -90,7 +118,7 @@ public class GridManager : MonoBehaviour
               continue;
             }
             Debug.Log("Moving block at: " + BlockToMove.GridPos + " to: " + blockData.gridPosition);
-            yield return BoardManager.Instance.PullTheBlock(BlockToMove, blockData, BoardManager.Instance.fastPullDownSpeed);
+            yield return BoardManager.Instance.PullTheBlockDown(BlockToMove, blockData, BoardManager.Instance.fastPullDownSpeed);
             print("Called PullTheBlock");
             RemoveBlockFromGrid(currPos);
             // yield return new WaitForSeconds(0.05f);
@@ -100,14 +128,14 @@ public class GridManager : MonoBehaviour
     }
   }
 
-  internal void SetBlockData(Block block, Vector2Int position, int value =-1)
+  internal void SetBlockData(Block block, Vector2Int position, int value = -1)
   {
     if (IsValidPosition(position))
     {
       BlockGrid[position.x].Column[position.y].value = block.Value;
       block.SetGridPosition(position);
 
-      if(value != -1)
+      if (value != -1)
       {
         BoardManager.Instance.CheckAndExpandNumbers();
         block.SetValue(BoardManager.Instance.BlockNumbers.IndexOf(value));
@@ -118,7 +146,7 @@ public class GridManager : MonoBehaviour
       Debug.LogError("Invalid position while setting block data.");
     }
   }
-  
+
   void RemoveBlockFromGrid(Vector2Int position)
   {
     if (IsValidPosition(position))
@@ -161,10 +189,22 @@ public class GridManager : MonoBehaviour
       return true;
     }
   }
-  
+
   internal bool IsValidPosition(Vector2Int position)
   {
     return position.x >= 0 && position.x < width && position.y >= 0 && position.y < height;
+  }
+
+  internal bool CheckGameEnd()
+  {
+    for (int i = 0; i < BlockGrid.Count; i++)
+    {
+      if (!IsEmpty(new(i, 0)))
+      {
+        return true;
+      }
+    }
+    return false;
   }
 
   // internal Block GetBlock(Vector2Int position)

@@ -10,9 +10,9 @@ public class BoardManager : MonoBehaviour
   [SerializeField] internal List<int> BlockNumbers = new();
   [SerializeField] internal List<Color> BlockColors = new();
   [SerializeField] internal Gradient colorGradient;
-  [SerializeField] internal float basePullDownSpeed = 15f;
-  [SerializeField] internal float fastPullDownSpeed = 0.2f;
-  [SerializeField] private float fallDuration = 0.2f;
+  [SerializeField] internal float basePullDownSpeed = 3f;
+  [SerializeField] internal float fastPullDownSpeed = 0.05f;
+  [SerializeField] private float fallDuration = 0.05f;
   internal int FocusedColumnIndex = 2;
   private Tween CurrBlockTween;
   private bool didDownwardMerge = false;
@@ -85,29 +85,32 @@ public class BoardManager : MonoBehaviour
     }
   }
 
-  internal IEnumerator PullTheBlock(Block BlockToPull, float duration)
+  internal IEnumerator PullTheBlock(Block BlockToPull, BlockData MoveToBlock, float duration)
   {
-    BlockData BlockData = GridManager.Instance.GetMovableBlockData(InputManager.Instance.IColumnIndex);
-    if (BlockData == null)
+    if (MoveToBlock == null)
     {
-      Debug.LogError("Game Over - No available space!");
+      Debug.Log("Game Over - No available space!");
       yield break;
     }
+    Debug.Log("Pulling block to: " + MoveToBlock.gridPosition.ToString());
+    float Duration = (MoveToBlock.gridPosition.y+1) * duration;
 
     CurrBlockTween?.Kill();
-    CurrBlockTween = BlockToPull.transform.DOMoveY(BlockData.boardPosition.position.y, duration)
+    CurrBlockTween = BlockToPull.transform.DOMoveY(MoveToBlock.boardPosition.position.y, duration)
     .OnComplete(() =>
     {
-      Debug.Log("Block Dropped at : " + BlockData.gridPosition.ToString());
-      BlockToPull.transform.position = BlockData.boardPosition.position;
-      GridManager.Instance.SetBlockData(BlockToPull, BlockData.gridPosition);
+      InputManager.Instance.BlockTransform = null;
+      Debug.Log("Block Dropped at : " + MoveToBlock.gridPosition.ToString());
+      BlockToPull.transform.position = MoveToBlock.boardPosition.position;
+      GridManager.Instance.SetBlockData(BlockToPull, MoveToBlock.gridPosition);
       StartCascade();
-    });
+    })
+    .SetEase(Ease.Linear);
   }
 
-  internal IEnumerator PullTheBlock(Block BlockToPull, BlockData BlockMoveTo, float duration)
+  internal IEnumerator PullTheBlockDown(Block BlockToPull, BlockData BlockMoveTo, float duration)
   {
-    yield return BlockToPull.transform.DOLocalMoveY(BlockMoveTo.boardPosition.localPosition.y, duration).WaitForCompletion();
+    yield return BlockToPull.transform.DOLocalMoveY(BlockMoveTo.boardPosition.localPosition.y, duration).SetEase(Ease.Linear).WaitForCompletion();
     GridManager.Instance.SetBlockData(BlockToPull, BlockMoveTo.gridPosition, BlockToPull.Value);
   }
 
@@ -222,7 +225,7 @@ public class BoardManager : MonoBehaviour
 
     if (blockAbove != null && blockBelow != null && blockAbove.value == blockBelow.value)
     {
-      Debug.Log($"Merging {blockAbove.gridPosition} and {blockBelow.gridPosition}");
+      // Debug.Log($"Merging {blockAbove.gridPosition} and {blockBelow.gridPosition}");
       yield return GridManager.Instance.BlockList.Find(b => b.GridPos == belowPos).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == currPos));
       didDownwardMerge = true;
       yield return new WaitForSeconds(fallDuration);
@@ -254,25 +257,25 @@ public class BoardManager : MonoBehaviour
 
     if (rightBlock?.value == middleBlock?.value && leftBlock?.value == middleBlock?.value)
     {
-      Debug.Log("Merging left and right");
-      Debug.Log("Merging " + middleBlock?.gridPosition + " and " + leftBlock?.gridPosition + " and " + rightBlock?.gridPosition);
-      yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == leftBlock.gridPosition), GridManager.Instance.BlockList.Find(b => b.GridPos == rightBlock.gridPosition));
+      // Debug.Log("Merging left and right");
+      // Debug.Log("Merging " + middleBlock?.gridPosition + " and " + leftBlock?.gridPosition + " and " + rightBlock?.gridPosition);
+      yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock?.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == leftBlock?.gridPosition), GridManager.Instance.BlockList.Find(b => b.GridPos == rightBlock?.gridPosition));
       didSideMerge = true;
       yield return new WaitForSeconds(fallDuration);
     }
-    if (leftBlock.value == middleBlock.value)
+    if (leftBlock?.value == middleBlock?.value)
     {
-      Debug.Log("Merging left");
-      Debug.Log("Merging " + middleBlock.gridPosition + " and " + leftBlock.gridPosition);
-      yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == leftBlock.gridPosition), true);
+      // Debug.Log("Merging left");
+      // Debug.Log("Merging " + middleBlock?.gridPosition + " and " + leftBlock?.gridPosition);
+      yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock?.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == leftBlock?.gridPosition), true);
       didSideMerge = true;
       yield return new WaitForSeconds(fallDuration);
     }
-    if (rightBlock.value == middleBlock.value)
+    if (rightBlock?.value == middleBlock?.value)
     {
-      Debug.Log("Merging right");
-      Debug.Log("Merging " + middleBlock.gridPosition + " and " + rightBlock.gridPosition);
-      yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == rightBlock.gridPosition), true);
+      // Debug.Log("Merging right");
+      // Debug.Log("Merging " + middleBlock?.gridPosition + " and " + rightBlock?.gridPosition);
+      yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock?.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == rightBlock?.gridPosition), true);
       didSideMerge = true;
       yield return new WaitForSeconds(fallDuration);
     }

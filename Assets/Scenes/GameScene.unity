@@ -934,9 +934,9 @@ MonoBehaviour:
     m_ColorSpace: -1
     m_NumColorKeys: 2
     m_NumAlphaKeys: 2
-  basePullDownSpeed: 25
-  fastPullDownSpeed: 0.2
-  fallDuration: 0.2
+  basePullDownSpeed: 1
+  fastPullDownSpeed: 0.01
+  fallDuration: 0.05
 --- !u!4 &341955747
 Transform:
   m_ObjectHideFlags: 0

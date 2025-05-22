@@ -5,7 +5,8 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
 {
   public static InputManager Instance;
   [SerializeField] internal int IColumnIndex = 2;
-  [SerializeField] private Transform BlockTransform;
+  [SerializeField] internal Transform BlockTransform;
+  private BlockData BlockToMoveData;
 
   void Awake()
   {
@@ -17,18 +18,29 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
   internal void setBlock(Transform blockTransform)
   {
     BlockTransform = blockTransform;
+
+    BlockToMoveData = GridManager.Instance.GetPullableBlockData(BlockTransform, IColumnIndex, IColumnIndex);
+
+    if (BlockToMoveData == null)
+    {
+      Debug.Log("No Block To Move To. Game End");
+      return;
+    }
+
+    StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, BlockToMoveData.gridPosition.y * BoardManager.Instance.basePullDownSpeed));
   }
 
   public void OnPointerDown(PointerEventData eventData)
   {
     OnUserInput(eventData);
   }
+
   public void OnPointerUp(PointerEventData eventData)
   {
     if (BlockTransform)
     {
       BoardManager.Instance.FocusedColumnIndex = IColumnIndex;
-      StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BoardManager.Instance.fastPullDownSpeed));
+      StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, BlockToMoveData.gridPosition.y * BoardManager.Instance.fastPullDownSpeed));
       BlockTransform = null;
     }
   }
@@ -70,7 +82,23 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
         closestIndex = i;
       }
     }
-    IColumnIndex = closestIndex;
-    return closestIndex;
+
+
+    if(closestIndex == IColumnIndex)
+    {
+      return closestIndex;
+    }
+
+    Debug.Log("Column Index Changed");
+
+    BlockToMoveData = GridManager.Instance.GetPullableBlockData(BlockTransform, IColumnIndex, closestIndex);
+    if (BlockToMoveData == null)
+    {
+      Debug.Log("No Block To Move To. Game End");
+      return IColumnIndex;
+    }
+    BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, BlockToMoveData.gridPosition.y * BoardManager.Instance.basePullDownSpeed);
+    IColumnIndex = BlockToMoveData.gridPosition.x;
+    return BlockToMoveData.gridPosition.x;
   }
 }

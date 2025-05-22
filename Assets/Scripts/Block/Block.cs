@@ -24,7 +24,7 @@ public class Block : MonoBehaviour
     Vector3 startPosi = initPosi + new Vector3(0, startPosiYOffset, 0);
 
     transform.position = startPosi;
-    GridPos = new();
+    GridPos = new(InputManager.Instance.IColumnIndex, GridManager.Instance.BlockGrid[0].Column.Count);
 
     SetValue(index);
   }
@@ -34,7 +34,6 @@ public class Block : MonoBehaviour
     if(index >= BoardManager.Instance.BlockNumbers.Count)
     {
       BoardManager.Instance.CheckAndExpandNumbers();
-      return;
     }
     BlockImage.color = BoardManager.Instance.BlockColors[index];
     Value = BoardManager.Instance.BlockNumbers[index];
@@ -50,34 +49,31 @@ public class Block : MonoBehaviour
   {
     if (!horizontal)
     {
-      BlockImage.DOFade(0, 0.1f);
-      yield return Block.transform.DOLocalMoveY(transform.localPosition.y, 0.1f).WaitForCompletion();
+      BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
+      yield return Block.transform.DOLocalMoveY(transform.localPosition.y, 0.1f).SetEase(Ease.Linear).WaitForCompletion();
       GridManager.Instance.RemoveBlock(Block.GridPos);
       Value *= 2;
       GridManager.Instance.SetBlockData(this, GridPos, Value);
-      SetValue(BoardManager.Instance.BlockNumbers.IndexOf(Value));
     }
     else
     {
-      Block.BlockImage.DOFade(0, 0.1f);
-      yield return Block.transform.DOLocalMoveX(transform.localPosition.x, 0.1f).WaitForCompletion();
+      Block.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
+      yield return Block.transform.DOLocalMoveX(transform.localPosition.x, 0.1f).SetEase(Ease.Linear).WaitForCompletion();
       GridManager.Instance.RemoveBlock(Block.GridPos);
       Value *= 2;
       GridManager.Instance.SetBlockData(this, GridPos, Value);
-      SetValue(BoardManager.Instance.BlockNumbers.IndexOf(Value));
     }
   }
 
   internal IEnumerator MergeBlock(Block Block1, Block Block2)
   {
-    BlockImage.DOFade(0, 0.1f);
-    BlockImage.DOFade(0, 0.1f);
+    BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
+    BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
     Block1.transform.DOLocalMoveX(transform.localPosition.x, 0.1f);
-    yield return Block2.transform.DOLocalMoveX(transform.localPosition.x, 0.1f).WaitForCompletion();
+    yield return Block2.transform.DOLocalMoveX(transform.localPosition.x, 0.1f).SetEase(Ease.Linear).WaitForCompletion();
     GridManager.Instance.RemoveBlock(Block1.GridPos);
     GridManager.Instance.RemoveBlock(Block2.GridPos);
     Value *= 4;
-    SetValue(BoardManager.Instance.BlockNumbers.IndexOf(Value));
     GridManager.Instance.SetBlockData(this, GridPos, Value);
   }
 }

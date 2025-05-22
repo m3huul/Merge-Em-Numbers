@@ -47,9 +47,13 @@ public class SpawnManager : MonoBehaviour
     Block blockScript = Block.GetComponent<Block>();
     blockScript.Init(SpawnedBlockIndex);
     CurrentBlock = blockScript;
-  
-    StartCoroutine(BoardManager.Instance.PullTheBlock(CurrentBlock, BoardManager.Instance.basePullDownSpeed));
 
+    if (GridManager.Instance.CheckGameEnd())
+    {
+      Debug.Log("Game Over");
+      return;
+    }
+    
     InputManager.Instance.setBlock(Block.transform);
     GridManager.Instance.BlockList.Add(blockScript);
   }

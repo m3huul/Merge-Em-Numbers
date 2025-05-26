@@ -934,9 +934,9 @@ MonoBehaviour:
     m_ColorSpace: -1
     m_NumColorKeys: 2
     m_NumAlphaKeys: 2
-  basePullDownSpeed: 1
-  fastPullDownSpeed: 0.01
-  fallDuration: 0.05
+  basePullDownSpeed: 80
+  fastPullDownSpeed: 2000
+  fallDuration: 0.1
 --- !u!4 &341955747
 Transform:
   m_ObjectHideFlags: 0
@@ -5062,6 +5062,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   IColumnIndex: 2
   BlockTransform: {fileID: 0}
+  BlockToMoveData:
+    value: 0
+    boardPosition: {fileID: 0}
+    gridPosition: {x: 0, y: 0}
 --- !u!1001 &2036424105
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5239,6 +5243,7 @@ MonoBehaviour:
   GridParent: {fileID: 1033645831}
   BlockGrid: []
   BlockList: []
+  EmptyDroppableOffset: 0
 --- !u!4 &2042668313
 Transform:
   m_ObjectHideFlags: 0

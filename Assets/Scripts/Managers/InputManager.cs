@@ -6,7 +6,7 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
   public static InputManager Instance;
   [SerializeField] internal int IColumnIndex = 2;
   [SerializeField] internal Transform BlockTransform;
-  private BlockData BlockToMoveData;
+  [SerializeField] private BlockData BlockToMoveData;
 
   void Awake()
   {
@@ -15,19 +15,24 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
       Instance = this;
     }
   }
+  void BlockMovement(int currCol, int targetCol)
+  {
+    BlockToMoveData = GridManager.Instance.GetDroppableBlockData(BlockTransform, currCol, targetCol);
+
+    if (BlockToMoveData == null)
+    {
+      BoardManager.Instance.KillGame();
+      BlockTransform = null;
+      return;
+    }
+    float duration = CalculateDuration(BlockToMoveData.boardPosition, BoardManager.Instance.basePullDownSpeed);
+    StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, duration));
+  }
   internal void setBlock(Transform blockTransform)
   {
     BlockTransform = blockTransform;
 
-    BlockToMoveData = GridManager.Instance.GetPullableBlockData(BlockTransform, IColumnIndex, IColumnIndex);
-
-    if (BlockToMoveData == null)
-    {
-      Debug.Log("No Block To Move To. Game End");
-      return;
-    }
-
-    StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, BlockToMoveData.gridPosition.y * BoardManager.Instance.basePullDownSpeed));
+    BlockMovement(IColumnIndex, IColumnIndex);
   }
 
   public void OnPointerDown(PointerEventData eventData)
@@ -37,13 +42,29 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
 
   public void OnPointerUp(PointerEventData eventData)
   {
-    if (BlockTransform)
+    if (BlockTransform != null && BlockToMoveData != null)
     {
       BoardManager.Instance.FocusedColumnIndex = IColumnIndex;
-      StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, BlockToMoveData.gridPosition.y * BoardManager.Instance.fastPullDownSpeed));
+
+      float duration = CalculateDuration(BlockToMoveData.boardPosition, BoardManager.Instance.fastPullDownSpeed);
+
+      StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, duration));
       BlockTransform = null;
     }
   }
+
+  internal float CalculateDuration(Transform targetTransform, float speed, Transform blockTransform = null)
+  {
+    if (blockTransform != null)
+    {
+      float Distance = Vector3.Distance(blockTransform.position, targetTransform.position);
+      return Distance / speed;
+    }
+
+    float distance = Vector3.Distance(BlockTransform.position, targetTransform.position);
+    return distance / speed;
+  }
+
 
   public void OnDrag(PointerEventData eventData)
   {
@@ -83,21 +104,19 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
       }
     }
 
-
-    if(closestIndex == IColumnIndex)
+    if (closestIndex == IColumnIndex)
     {
       return closestIndex;
     }
 
     Debug.Log("Column Index Changed");
 
-    BlockToMoveData = GridManager.Instance.GetPullableBlockData(BlockTransform, IColumnIndex, closestIndex);
+    BlockMovement(IColumnIndex, closestIndex);
     if (BlockToMoveData == null)
     {
-      Debug.Log("No Block To Move To. Game End");
       return IColumnIndex;
     }
-    BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, BlockToMoveData.gridPosition.y * BoardManager.Instance.basePullDownSpeed);
+
     IColumnIndex = BlockToMoveData.gridPosition.x;
     return BlockToMoveData.gridPosition.x;
   }

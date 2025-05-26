@@ -35,6 +35,18 @@ public class BoardManager : MonoBehaviour
     }
   }
 
+  internal void KillGame()
+  {
+    Debug.Log("No Block To Move To. Game End");
+    InputManager.Instance.enabled = false;
+    StopAllCoroutines();
+    if (CurrBlockTween != null)
+    {
+      CurrBlockTween.Kill();
+      CurrBlockTween = null;
+    }
+  }
+
   int GenerateNextNumber()
   {
     int lastNumber = BlockNumbers[BlockNumbers.Count - 1];
@@ -100,6 +112,7 @@ public class BoardManager : MonoBehaviour
     .OnComplete(() =>
     {
       InputManager.Instance.BlockTransform = null;
+      InputManager.Instance.enabled = false;
       Debug.Log("Block Dropped at : " + MoveToBlock.gridPosition.ToString());
       BlockToPull.transform.position = MoveToBlock.boardPosition.position;
       GridManager.Instance.SetBlockData(BlockToPull, MoveToBlock.gridPosition);

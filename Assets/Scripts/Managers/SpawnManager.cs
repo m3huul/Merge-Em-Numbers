@@ -43,17 +43,20 @@ public class SpawnManager : MonoBehaviour
 
   void Spawn(int SpawnedBlockIndex)
   {
+    if (GridManager.Instance.CheckGameEnd())
+    {
+      BoardManager.Instance.KillGame();
+      return;
+    }
+
     GameObject Block = Instantiate(BlockPrefab, GridManager.Instance.BlockGrid[2].Column[0].boardPosition.position, Quaternion.identity, NewBlocksParent);
     Block blockScript = Block.GetComponent<Block>();
     blockScript.Init(SpawnedBlockIndex);
     CurrentBlock = blockScript;
 
-    if (GridManager.Instance.CheckGameEnd())
-    {
-      Debug.Log("Game Over");
-      return;
-    }
-    
+
+    if(!InputManager.Instance.enabled)
+      InputManager.Instance.enabled = true;
     InputManager.Instance.setBlock(Block.transform);
     GridManager.Instance.BlockList.Add(blockScript);
   }

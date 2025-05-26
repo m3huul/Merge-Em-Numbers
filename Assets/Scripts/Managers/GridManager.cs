@@ -10,6 +10,7 @@ public class GridManager : MonoBehaviour
   [SerializeField] private Transform GridParent;
   [SerializeField] internal List<BoardBlocks> BlockGrid; //List of all block GO's in the grid  Col, Row
   [SerializeField] internal List<Block> BlockList; //List of all block GO's in the grid
+  [SerializeField] private float EmptyDroppableOffset = 0.1f; // Offset to check if the block can be dropped
 
   private void Awake()
   {
@@ -51,7 +52,7 @@ public class GridManager : MonoBehaviour
   {
     for (int i = BlockGrid[col].Column.Count - 1; i >= 0; i--)
     {
-      if (IsEmpty(new Vector2Int(col, i)) && currentBlockTransform.position.y >= BlockGrid[col].Column[i].boardPosition.position.y+80f)
+      if (IsEmpty(new Vector2Int(col, i)) && currentBlockTransform.position.y >= BlockGrid[col].Column[i].boardPosition.position.y+EmptyDroppableOffset)
       {
         return BlockGrid[col].Column[i];
       }
@@ -71,32 +72,39 @@ public class GridManager : MonoBehaviour
     return null;
   }
 
-  internal BlockData GetPullableBlockData(Transform currentBlockPosition, int currCol, int colToMoveTo)
+  internal BlockData GetDroppableBlockData(Transform currentBlockPosition, int currCol, int colToMoveTo)
   {
-    // for (int i = currCol + 1; i <= colToMoveTo; i++)
-    // {
-    //   BlockData blockData = GetMovableBlockData(currentBlockPosition, i);
-    //   if (blockData != null)
-    //   {
-    //     return blockData;
-    //   }
-    // }
-
-    // for (int i = currCol - 1; i >= colToMoveTo; i--)
-    // {
-    //   BlockData blockData = GetMovableBlockData(currentBlockPosition, i);
-    //   if (blockData != null)
-    //   {
-    //     return blockData;
-    //   }
-    // }
-    BlockData blockData = GetMovableBlockData(currentBlockPosition, colToMoveTo);
-    if (blockData != null)
+    if (colToMoveTo > currCol)
     {
-      return blockData;
+      BlockData nextColBlockData = GetMovableBlockData(currentBlockPosition, currCol + 1);
+      if (nextColBlockData == null)
+      {
+        return GetMovableBlockData(currentBlockPosition, currCol);
+      }
+      BlockData blockData = GetMovableBlockData(currentBlockPosition, colToMoveTo);
+      if (blockData != null)
+      {
+        return blockData;
+      }
     }
-
-    return GetMovableBlockData(currentBlockPosition, currCol);
+    else if (colToMoveTo < currCol)
+    {
+      BlockData prevColBlockData = GetMovableBlockData(currentBlockPosition, currCol - 1);
+      if (prevColBlockData == null)
+      {
+        return GetMovableBlockData(currentBlockPosition, currCol);
+      }
+      BlockData blockData = GetMovableBlockData(currentBlockPosition, colToMoveTo);
+      if (blockData != null)
+      {
+        return blockData;
+      }
+    }
+    else
+    {
+      return GetMovableBlockData(currentBlockPosition, currCol);
+    }
+    return null;
   }
 
   internal IEnumerator MoveAllBlocksDown()
@@ -118,7 +126,7 @@ public class GridManager : MonoBehaviour
               continue;
             }
             Debug.Log("Moving block at: " + BlockToMove.GridPos + " to: " + blockData.gridPosition);
-            yield return BoardManager.Instance.PullTheBlockDown(BlockToMove, blockData, BoardManager.Instance.fastPullDownSpeed);
+            yield return BoardManager.Instance.PullTheBlockDown(BlockToMove, blockData, InputManager.Instance.CalculateDuration(blockData.boardPosition, BoardManager.Instance.fastPullDownSpeed, BlockToMove.transform));
             print("Called PullTheBlock");
             RemoveBlockFromGrid(currPos);
             // yield return new WaitForSeconds(0.05f);

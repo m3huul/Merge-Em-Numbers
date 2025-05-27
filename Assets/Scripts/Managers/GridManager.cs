@@ -35,6 +35,19 @@ public class GridManager : MonoBehaviour
     }
   }
 
+  internal void Reset()
+  {
+    BlockList.ForEach(x => Destroy(x.gameObject));
+    BlockList.Clear();
+    for (int i = 0; i < BlockGrid.Count; i++)
+    {
+      for (int j = 0; j < BlockGrid[i].Column.Count; j++)
+      {
+        BlockGrid[i].Column[j].value = 0;
+      }
+    }
+  }
+
   internal BlockData GetBlockData(Vector2Int position)
   {
     if (IsValidPosition(position))
@@ -125,7 +138,7 @@ public class GridManager : MonoBehaviour
               continue;
             }
             Vector2Int currPos = BlockToMove.GridPos;
-            // Debug.Log("Moving block at: " + BlockToMove.GridPos + " to: " + blockData.gridPosition);
+            Debug.Log("Moving block at: " + BlockToMove.GridPos + " to: " + blockData.gridPosition);
             yield return BoardManager.Instance.PullTheBlockDown(BlockToMove, blockData, BoardManager.Instance.fastPullDownSpeed);
             RemoveBlockFromGrid(currPos);
           }

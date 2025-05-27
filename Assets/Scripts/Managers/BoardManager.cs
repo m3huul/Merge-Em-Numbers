@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using System.Collections;
+using UnityEngine.UI;
 
 public class BoardManager : MonoBehaviour
 {
@@ -15,12 +16,21 @@ public class BoardManager : MonoBehaviour
   private Tween CurrBlockTween;
   private bool didDownwardMerge = false;
   private bool didSideMerge = false;
+  [SerializeField] private Button RestartButton;
   void Awake()
   {
     if (Instance == null)
     {
       Instance = this;
     }
+
+    RestartButton.onClick.AddListener(() =>
+    {
+      RestartGame();
+    });
+
+    Time.timeScale = 1f;
+    Application.targetFrameRate = -1;
   }
 
   void Start()
@@ -43,6 +53,15 @@ public class BoardManager : MonoBehaviour
       CurrBlockTween.Kill();
       CurrBlockTween = null;
     }
+    RestartButton.gameObject.SetActive(true);
+  }
+
+  void RestartGame()
+  {
+    Debug.Log("Restarting Game");
+    RestartButton.gameObject.SetActive(false);
+    GridManager.Instance.Reset();
+    SpawnManager.Instance.Reset();
   }
 
   int GenerateNextNumber()
@@ -125,24 +144,30 @@ public class BoardManager : MonoBehaviour
 
     while (keepCascading)
     {
+      Debug.Log("Cascading...");
       yield return GridManager.Instance.MoveAllBlocksDown();
+      Debug.Log("After Move All Blocks Down");
 
-      yield return new WaitForSeconds(fallDuration); // Wait before merge
+      yield return new WaitForSecondsRealtime(fallDuration); // Wait before merge
+      Debug.Log("Cascading...");
 
       didDownwardMerge = false;
       yield return HandleDownwardMerges(FocusedColumnIndex);
       if (didDownwardMerge)
-        yield return new WaitForSeconds(fallDuration);
+        yield return new WaitForSecondsRealtime(fallDuration);
 
+      Debug.Log("After Handle Downward Merges");
       didSideMerge = false;
       yield return HandleSideMerges(FocusedColumnIndex);
       if (didSideMerge)
-        yield return new WaitForSeconds(fallDuration);
+        yield return new WaitForSecondsRealtime(fallDuration);
+
+      Debug.Log("After Handle Side Merges");
 
       keepCascading = didDownwardMerge || didSideMerge;
     }
 
-    yield return new WaitForSeconds(fallDuration);
+    yield return new WaitForSecondsRealtime(fallDuration);
 
     SpawnManager.Instance.SpawnNextBlock();
   }
@@ -228,7 +253,7 @@ public class BoardManager : MonoBehaviour
       // Debug.Log($"Merging {blockAbove.gridPosition} and {blockBelow.gridPosition}");
       yield return GridManager.Instance.BlockList.Find(b => b.GridPos == belowPos).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == currPos));
       didDownwardMerge = true;
-      yield return new WaitForSeconds(fallDuration);
+      yield return new WaitForSecondsRealtime(fallDuration);
     }
   }
 
@@ -261,7 +286,7 @@ public class BoardManager : MonoBehaviour
       // Debug.Log("Merging " + middleBlock?.gridPosition + " and " + leftBlock?.gridPosition + " and " + rightBlock?.gridPosition);
       yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock?.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == leftBlock?.gridPosition), GridManager.Instance.BlockList.Find(b => b.GridPos == rightBlock?.gridPosition));
       didSideMerge = true;
-      yield return new WaitForSeconds(fallDuration);
+      yield return new WaitForSecondsRealtime(fallDuration);
     }
     if (leftBlock?.value == middleBlock?.value)
     {
@@ -269,7 +294,7 @@ public class BoardManager : MonoBehaviour
       // Debug.Log("Merging " + middleBlock?.gridPosition + " and " + leftBlock?.gridPosition);
       yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock?.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == leftBlock?.gridPosition), true);
       didSideMerge = true;
-      yield return new WaitForSeconds(fallDuration);
+      yield return new WaitForSecondsRealtime(fallDuration);
     }
     if (rightBlock?.value == middleBlock?.value)
     {
@@ -277,7 +302,7 @@ public class BoardManager : MonoBehaviour
       // Debug.Log("Merging " + middleBlock?.gridPosition + " and " + rightBlock?.gridPosition);
       yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock?.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == rightBlock?.gridPosition), true);
       didSideMerge = true;
-      yield return new WaitForSeconds(fallDuration);
+      yield return new WaitForSecondsRealtime(fallDuration);
     }
   }
 }

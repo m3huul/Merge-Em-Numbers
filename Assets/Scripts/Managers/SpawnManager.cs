@@ -22,8 +22,15 @@ public class SpawnManager : MonoBehaviour
     SpawnNextBlock();
   }
 
+  internal void Reset()
+  {
+    initBlock = false;
+    SpawnNextBlock();
+  }
+
   internal void SpawnNextBlock()
   {
+    // Debug.Log("Spawning Next Block");
     if (!initBlock)
     {
       initBlock = true;

@@ -2,14 +2,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using System.Collections;
-using System;
 
 public class BoardManager : MonoBehaviour
 {
   public static BoardManager Instance;
   [SerializeField] internal List<int> BlockNumbers = new();
   [SerializeField] internal List<Color> BlockColors = new();
-  [SerializeField] internal Gradient colorGradient;
   [SerializeField] internal float basePullDownSpeed = 3f;
   [SerializeField] internal float fastPullDownSpeed = 0.05f;
   [SerializeField] private float fallDuration = 0.05f;
@@ -68,21 +66,12 @@ public class BoardManager : MonoBehaviour
 
   Color GenerateNewColor()
   {
-    float hue = BlockNumbers.Count * 0.1f % 1;
+    float hue = BlockNumbers.Count * 0.15f % 1;
     return Color.HSVToRGB(hue, 0.8f, 1.0f);
   }
 
   internal void CheckAndExpandNumbers()
   {
-    foreach (Block block in GridManager.Instance.BlockList)
-    {
-      int blockValue = block.Value;
-      if (!BlockNumbers.Contains(blockValue))
-      {
-        BlockNumbers.Add(blockValue);
-        BlockColors.Add(GetColorForValue(blockValue));
-      }
-    }
     for (int i = 0; i < GridManager.Instance.BlockGrid.Count; i++)
     {
       for (int j = 0; j < GridManager.Instance.BlockGrid[i].Column.Count; j++)
@@ -104,16 +93,14 @@ public class BoardManager : MonoBehaviour
       Debug.Log("Game Over - No available space!");
       yield break;
     }
-    Debug.Log("Pulling block to: " + MoveToBlock.gridPosition.ToString());
-    float Duration = (MoveToBlock.gridPosition.y+1) * duration;
-
+    // Debug.Log("Pulling block to: " + MoveToBlock.gridPosition.ToString());
     CurrBlockTween?.Kill();
     CurrBlockTween = BlockToPull.transform.DOMoveY(MoveToBlock.boardPosition.position.y, duration)
     .OnComplete(() =>
     {
       InputManager.Instance.BlockTransform = null;
       InputManager.Instance.enabled = false;
-      Debug.Log("Block Dropped at : " + MoveToBlock.gridPosition.ToString());
+      // Debug.Log("Block Dropped at : " + MoveToBlock.gridPosition.ToString());
       BlockToPull.transform.position = MoveToBlock.boardPosition.position;
       GridManager.Instance.SetBlockData(BlockToPull, MoveToBlock.gridPosition);
       StartCascade();

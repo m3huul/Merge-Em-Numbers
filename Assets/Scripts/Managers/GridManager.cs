@@ -119,17 +119,15 @@ public class GridManager : MonoBehaviour
           if (blockData != null)
           {
             Block BlockToMove = BlockList.Find(x => x.GridPos == new Vector2Int(i, j));
-            Vector2Int currPos = BlockToMove.GridPos;
             if (BlockToMove == null)
             {
               Debug.LogError("Block to move is null.");
               continue;
             }
-            Debug.Log("Moving block at: " + BlockToMove.GridPos + " to: " + blockData.gridPosition);
-            yield return BoardManager.Instance.PullTheBlockDown(BlockToMove, blockData, InputManager.Instance.CalculateDuration(blockData.boardPosition, BoardManager.Instance.fastPullDownSpeed, BlockToMove.transform));
-            print("Called PullTheBlock");
+            Vector2Int currPos = BlockToMove.GridPos;
+            // Debug.Log("Moving block at: " + BlockToMove.GridPos + " to: " + blockData.gridPosition);
+            yield return BoardManager.Instance.PullTheBlockDown(BlockToMove, blockData, BoardManager.Instance.fastPullDownSpeed);
             RemoveBlockFromGrid(currPos);
-            // yield return new WaitForSeconds(0.05f);
           }
         }
       }
@@ -145,7 +143,8 @@ public class GridManager : MonoBehaviour
 
       if (value != -1)
       {
-        BoardManager.Instance.CheckAndExpandNumbers();
+        if(!BoardManager.Instance.BlockNumbers.Contains(value))
+          BoardManager.Instance.CheckAndExpandNumbers();
         block.SetValue(BoardManager.Instance.BlockNumbers.IndexOf(value));
       }
     }
@@ -159,7 +158,7 @@ public class GridManager : MonoBehaviour
   {
     if (IsValidPosition(position))
     {
-      print("Removing block value from grid at: " + position);
+      // Debug.Log("Removing block value from grid at: " + position);
       BlockGrid[position.x].Column[position.y].value = 0;
     }
   }
@@ -169,15 +168,14 @@ public class GridManager : MonoBehaviour
     if (IsValidPosition(position))
     {
       BlockGrid[position.x].Column[position.y].value = 0;
-      foreach (var block in BlockList)
+      Block block = BlockList.Find(b => b.GridPos == position);
+      if (block == null)
       {
-        if (block.GridPos == position)
-        {
-          BlockList.Remove(block);
-          Destroy(block.gameObject);
-          break;
-        }
+        Debug.LogError("Block to remove is null at position: " + position);
+        return;
       }
+      BlockList.Remove(block);
+      Destroy(block.gameObject);
     }
     else
     {
@@ -214,33 +212,6 @@ public class GridManager : MonoBehaviour
     }
     return false;
   }
-
-  // internal Block GetBlock(Vector2Int position)
-  // {
-  //   if (IsValidPosition(position))
-  //   {
-  //     return grid[position.x, position.y];
-  //   }
-  //   else
-  //   {
-  //     Debug.LogError("Invalid position while getting block.");
-  //     return null;
-  //   }
-  // }
-
-  // internal void PlaceBlock(Block block, Vector2Int position)
-  // {
-  //   if (IsValidPosition(position) && IsEmpty(position))
-  //   {
-  //     grid[position.x, position.y] = block;
-  //     block.transform.position = new Vector3(position.x, position.y, 0);
-  //   }
-  //   else
-  //   {
-  //     Debug.LogError("Invalid position or block already exists while placing block.");
-  //   }
-  // }
-
 }
 
 [Serializable]

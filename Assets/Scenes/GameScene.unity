@@ -665,6 +665,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: PredictedBlock
       objectReference: {fileID: 0}
+    - target: {fileID: 9014065440090820313, guid: 351ec6bc67853d24690928fcd3f9582f, type: 3}
+      propertyPath: m_PreserveAspect
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 9103932446411067343, guid: 351ec6bc67853d24690928fcd3f9582f, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -904,39 +908,9 @@ MonoBehaviour:
   BlockNumbers: 02000000
   BlockColors:
   - {r: 1, g: 0.47058824, b: 0.47843137, a: 1}
-  colorGradient:
-    serializedVersion: 2
-    key0: {r: 1, g: 0.4669811, b: 0.4669811, a: 1}
-    key1: {r: 1, g: 1, b: 1, a: 1}
-    key2: {r: 0, g: 0, b: 0, a: 0}
-    key3: {r: 0, g: 0, b: 0, a: 0}
-    key4: {r: 0, g: 0, b: 0, a: 0}
-    key5: {r: 0, g: 0, b: 0, a: 0}
-    key6: {r: 0, g: 0, b: 0, a: 0}
-    key7: {r: 0, g: 0, b: 0, a: 0}
-    ctime0: 0
-    ctime1: 65535
-    ctime2: 0
-    ctime3: 0
-    ctime4: 0
-    ctime5: 0
-    ctime6: 0
-    ctime7: 0
-    atime0: 0
-    atime1: 65535
-    atime2: 0
-    atime3: 0
-    atime4: 0
-    atime5: 0
-    atime6: 0
-    atime7: 0
-    m_Mode: 0
-    m_ColorSpace: -1
-    m_NumColorKeys: 2
-    m_NumAlphaKeys: 2
-  basePullDownSpeed: 80
-  fastPullDownSpeed: 2000
-  fallDuration: 0.1
+  basePullDownSpeed: 120
+  fastPullDownSpeed: 0.1
+  fallDuration: 0.05
 --- !u!4 &341955747
 Transform:
   m_ObjectHideFlags: 0
@@ -2680,7 +2654,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   PredictedBlock: {fileID: 287996897}
   BlockPrefab: {fileID: 2474122655813564630, guid: 351ec6bc67853d24690928fcd3f9582f, type: 3}
-  PredictiedIndexValue: 0
+  PredictedIndexValue: 0
   NewBlocksParent: {fileID: 873260915}
   CurrentBlock: {fileID: 0}
 --- !u!4 &949002255
@@ -3900,7 +3874,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 1
-  m_AdditionalShaderChannelsFlag: 25
+  m_AdditionalShaderChannelsFlag: 0
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0

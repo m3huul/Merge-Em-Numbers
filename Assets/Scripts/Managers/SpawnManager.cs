@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class SpawnManager : MonoBehaviour
@@ -7,7 +5,7 @@ public class SpawnManager : MonoBehaviour
   public static SpawnManager Instance;
   [SerializeField] private Block PredictedBlock;
   [SerializeField] private GameObject BlockPrefab;
-  [SerializeField] private int PredictiedIndexValue = 0;
+  [SerializeField] private int PredictedIndex = 0;
   [SerializeField] private Transform NewBlocksParent;
   [SerializeField] internal Block CurrentBlock;
   bool initBlock = false;
@@ -29,15 +27,15 @@ public class SpawnManager : MonoBehaviour
     if (!initBlock)
     {
       initBlock = true;
-      PredictiedIndexValue = Random.Range(0, 4);
-      PredictedBlock.SetValue(PredictiedIndexValue);
+      PredictedIndex = Random.Range(0, 4);
+      PredictedBlock.SetValue(PredictedIndex);
       Spawn(Random.Range(0, 4));
     }
     else
     {
-      Spawn(PredictiedIndexValue);
-      PredictiedIndexValue = Random.Range(0, 4);
-      PredictedBlock.SetValue(PredictiedIndexValue);
+      Spawn(PredictedIndex);
+      PredictedIndex = Random.Range(0, 4);
+      PredictedBlock.SetValue(PredictedIndex);
     }
   }
 

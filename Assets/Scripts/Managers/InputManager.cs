@@ -45,22 +45,13 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
     if (BlockTransform != null && BlockToMoveData != null)
     {
       BoardManager.Instance.FocusedColumnIndex = IColumnIndex;
-
-      float duration = CalculateDuration(BlockToMoveData.boardPosition, BoardManager.Instance.fastPullDownSpeed);
-
-      StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, duration));
+      StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, BoardManager.Instance.fastPullDownSpeed));
       BlockTransform = null;
     }
   }
 
-  internal float CalculateDuration(Transform targetTransform, float speed, Transform blockTransform = null)
+  internal float CalculateDuration(Transform targetTransform, float speed)
   {
-    if (blockTransform != null)
-    {
-      float Distance = Vector3.Distance(blockTransform.position, targetTransform.position);
-      return Distance / speed;
-    }
-
     float distance = Vector3.Distance(BlockTransform.position, targetTransform.position);
     return distance / speed;
   }
@@ -109,7 +100,7 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
       return closestIndex;
     }
 
-    Debug.Log("Column Index Changed");
+    // Debug.Log("Column Index Changed");
 
     BlockMovement(IColumnIndex, closestIndex);
     if (BlockToMoveData == null)

@@ -151,12 +151,6 @@ public class GridManager : MonoBehaviour
   {
     mergeData = new MergeData();
 
-    if (MergeData.Direction == MergeDirection.None)
-    {
-      Debug.LogError("MergeData.Direction is None, cannot check for merge. This should not happen. It should be ensured its not none before calling this method.");
-      return false;
-    }
-
     List<int> affectedColumn = new();
     switch (MergeData.Direction)
     {
@@ -303,19 +297,12 @@ public class GridManager : MonoBehaviour
     }
   }
 
-  internal void SetBlockData(Block block, Vector2Int position, int value = -1)
+  internal void SetBlockDataOnTheGrid(Block block, Vector2Int position)
   {
     if (IsValidPosition(position))
     {
       BlockGrid[position.x].Column[position.y].value = block.Value;
       block.SetGridPosition(position);
-
-      if (value != -1)
-      {
-        if (!BoardManager.Instance.BlockNumbers.Contains(value))
-          BoardManager.Instance.CheckAndExpandNumbers();
-        block.SetValue(BoardManager.Instance.BlockNumbers.IndexOf(value));
-      }
     }
     else
     {

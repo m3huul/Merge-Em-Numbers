@@ -34,12 +34,7 @@ public class BoardManager : MonoBehaviour
 
   void Start()
   {
-    for (int i = 0; i < 4; i++)
-    {
-      int newValue = GenerateNextNumber();
-      BlockColors.Add(GetColorForValue(newValue));
-      BlockNumbers.Add(newValue);
-    }
+    ExpandNumAndColorList();
   }
 
   internal void KillGame()
@@ -52,6 +47,8 @@ public class BoardManager : MonoBehaviour
       CurrBlockTween.Kill();
       CurrBlockTween = null;
     }
+    DOTween.KillAll();
+
     RestartButton.gameObject.SetActive(true);
   }
 
@@ -67,6 +64,16 @@ public class BoardManager : MonoBehaviour
   {
     int lastNumber = BlockNumbers[BlockNumbers.Count - 1];
     return lastNumber * 2;
+  }
+
+  void ExpandNumAndColorList()
+  {
+    for (int i = 0; i < 4; i++)
+    {
+      int newValue = GenerateNextNumber();
+      BlockColors.Add(GetColorForValue(newValue));
+      BlockNumbers.Add(newValue);
+    }
   }
 
   internal Color GetColorForValue(int value)
@@ -88,20 +95,26 @@ public class BoardManager : MonoBehaviour
     return Color.HSVToRGB(hue, 0.8f, 1.0f);
   }
 
-  internal void CheckAndExpandNumbers()
+  internal int CheckAndExpandNumbers(int Value)
   {
+    ExpandNumAndColorList();
+
     for (int i = 0; i < GridManager.Instance.BlockGrid.Count; i++)
     {
       for (int j = 0; j < GridManager.Instance.BlockGrid[i].Column.Count; j++)
       {
         int blockValue = GridManager.Instance.BlockGrid[i].Column[j].value;
+        if (blockValue == 0)
+          continue;
         if (!BlockNumbers.Contains(blockValue))
         {
-          BlockNumbers.Add(blockValue);
-          BlockColors.Add(GetColorForValue(blockValue));
+          ExpandNumAndColorList();
+          return BlockNumbers.IndexOf(Value);
         }
       }
     }
+
+    return BlockNumbers.IndexOf(Value);
   }
 
   internal IEnumerator PullTheBlock(Block BlockToPull, BlockData MoveToBlock, float duration)
@@ -120,7 +133,7 @@ public class BoardManager : MonoBehaviour
       InputManager.Instance.enabled = false;
       // Debug.Log("Block Dropped at : " + MoveToBlock.gridPosition.ToString());
       BlockToPull.transform.position = MoveToBlock.boardPosition.position;
-      GridManager.Instance.SetBlockData(BlockToPull, MoveToBlock.gridPosition);
+      GridManager.Instance.SetBlockDataOnTheGrid(BlockToPull, MoveToBlock.gridPosition);
       if (GridManager.Instance.CheckBlockForMerge(MoveToBlock.gridPosition, out MergeData))
       {
         StartCascade();
@@ -136,7 +149,7 @@ public class BoardManager : MonoBehaviour
   internal IEnumerator PullTheBlockDown(Block BlockToPull, BlockData BlockMoveTo, float duration)
   {
     yield return BlockToPull.transform.DOLocalMoveY(BlockMoveTo.boardPosition.localPosition.y, duration).SetEase(Ease.Linear).WaitForCompletion();
-    GridManager.Instance.SetBlockData(BlockToPull, BlockMoveTo.gridPosition, BlockToPull.Value);
+    GridManager.Instance.SetBlockDataOnTheGrid(BlockToPull, BlockMoveTo.gridPosition);
   }
 
   public void StartCascade()
@@ -146,16 +159,16 @@ public class BoardManager : MonoBehaviour
 
   private IEnumerator CascadeRoutine()
   {
-    Debug.Log("Cascade Start");
     while (MergeData.Direction != MergeDirection.None)
     {
       yield return new WaitForSecondsRealtime(fallDuration);
       yield return Merge();
       yield return GridManager.Instance.MoveAllBlocksDown();
-      if (GridManager.Instance.CheckBlocksForMerge(out MergeData))
-      {
-        Debug.Log("Cascade Continue");
-      }
+      bool cont = GridManager.Instance.CheckBlocksForMerge(out MergeData);
+      // if (cont)
+      // {
+      //   Debug.Log("Cascade Continue");
+      // }
     }
 
     SpawnManager.Instance.SpawnNextBlock();

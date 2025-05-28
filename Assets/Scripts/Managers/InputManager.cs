@@ -45,7 +45,8 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
     if (BlockTransform != null && BlockToMoveData != null)
     {
       BoardManager.Instance.FocusedColumnIndex = IColumnIndex;
-      StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, BoardManager.Instance.fastPullDownSpeed));
+      Block blockComponent = BlockTransform.GetComponent<Block>();
+      StartCoroutine(BoardManager.Instance.PullTheBlock(blockComponent, BlockToMoveData, BoardManager.Instance.fastPullDownSpeed));
       BlockTransform = null;
     }
   }

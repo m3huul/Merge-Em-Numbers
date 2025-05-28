@@ -910,7 +910,25 @@ MonoBehaviour:
   - {r: 1, g: 0.47058824, b: 0.47843137, a: 1}
   basePullDownSpeed: 120
   fastPullDownSpeed: 0.1
-  fallDuration: 0.005
+  fallDuration: 0.05
+  MergeData:
+    LeftBlock:
+      value: 0
+      boardPosition: {fileID: 0}
+      gridPosition: {x: 0, y: 0}
+    RightBlock:
+      value: 0
+      boardPosition: {fileID: 0}
+      gridPosition: {x: 0, y: 0}
+    BottomBlock:
+      value: 0
+      boardPosition: {fileID: 0}
+      gridPosition: {x: 0, y: 0}
+    TargetBlock:
+      value: 0
+      boardPosition: {fileID: 0}
+      gridPosition: {x: 0, y: 0}
+    Direction: 0
   RestartButton: {fileID: 1691821787}
 --- !u!4 &341955747
 Transform:
@@ -5475,6 +5493,24 @@ MonoBehaviour:
   BlockGrid: []
   BlockList: []
   EmptyDroppableOffset: 0
+  MergeData:
+    LeftBlock:
+      value: 0
+      boardPosition: {fileID: 0}
+      gridPosition: {x: 0, y: 0}
+    RightBlock:
+      value: 0
+      boardPosition: {fileID: 0}
+      gridPosition: {x: 0, y: 0}
+    BottomBlock:
+      value: 0
+      boardPosition: {fileID: 0}
+      gridPosition: {x: 0, y: 0}
+    TargetBlock:
+      value: 0
+      boardPosition: {fileID: 0}
+      gridPosition: {x: 0, y: 0}
+    Direction: 0
 --- !u!4 &2042668313
 Transform:
   m_ObjectHideFlags: 0

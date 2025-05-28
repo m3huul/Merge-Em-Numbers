@@ -12,10 +12,9 @@ public class BoardManager : MonoBehaviour
   [SerializeField] internal float basePullDownSpeed = 3f;
   [SerializeField] internal float fastPullDownSpeed = 0.05f;
   [SerializeField] private float fallDuration = 0.05f;
+  [SerializeField] private MergeData MergeData;
   internal int FocusedColumnIndex = 2;
   private Tween CurrBlockTween;
-  private bool didDownwardMerge = false;
-  private bool didSideMerge = false;
   [SerializeField] private Button RestartButton;
   void Awake()
   {
@@ -30,7 +29,7 @@ public class BoardManager : MonoBehaviour
     });
 
     Time.timeScale = 1f;
-    Application.targetFrameRate = -1;
+    Application.targetFrameRate = 60;
   }
 
   void Start()
@@ -122,7 +121,14 @@ public class BoardManager : MonoBehaviour
       // Debug.Log("Block Dropped at : " + MoveToBlock.gridPosition.ToString());
       BlockToPull.transform.position = MoveToBlock.boardPosition.position;
       GridManager.Instance.SetBlockData(BlockToPull, MoveToBlock.gridPosition);
-      StartCascade();
+      if (GridManager.Instance.CheckBlockForMerge(MoveToBlock.gridPosition, out MergeData))
+      {
+        StartCascade();
+      }
+      else
+      {
+        SpawnManager.Instance.SpawnNextBlock();
+      }
     })
     .SetEase(Ease.Linear);
   }
@@ -140,169 +146,56 @@ public class BoardManager : MonoBehaviour
 
   private IEnumerator CascadeRoutine()
   {
-    bool keepCascading = true;
-
-    while (keepCascading)
+    Debug.Log("Cascade Start");
+    while (MergeData.Direction != MergeDirection.None)
     {
-      Debug.Log("Cascading...");
+      yield return new WaitForSecondsRealtime(fallDuration);
+      yield return Merge();
       yield return GridManager.Instance.MoveAllBlocksDown();
-      Debug.Log("After Move All Blocks Down");
-
-      yield return new WaitForSecondsRealtime(fallDuration); // Wait before merge
-      Debug.Log("Cascading...");
-
-      didDownwardMerge = false;
-      yield return HandleDownwardMerges(FocusedColumnIndex);
-      if (didDownwardMerge)
-        yield return new WaitForSecondsRealtime(fallDuration);
-
-      Debug.Log("After Handle Downward Merges");
-      didSideMerge = false;
-      yield return HandleSideMerges(FocusedColumnIndex);
-      if (didSideMerge)
-        yield return new WaitForSecondsRealtime(fallDuration);
-
-      Debug.Log("After Handle Side Merges");
-
-      keepCascading = didDownwardMerge || didSideMerge;
+      if (GridManager.Instance.CheckBlocksForMerge(out MergeData))
+      {
+        Debug.Log("Cascade Continue");
+      }
     }
-
-    yield return new WaitForSecondsRealtime(fallDuration);
 
     SpawnManager.Instance.SpawnNextBlock();
   }
 
-  private IEnumerator HandleDownwardMerges(int ColIndex)
+  IEnumerator Merge()
   {
-    yield return CheckCenterColumn(ColIndex);
-    yield return CheckLeftColumns(ColIndex);
-    yield return CheckRightColumns(ColIndex);
-  }
-
-  IEnumerator CheckCenterColumn(int col, bool down = true)
-  {
-    for (int i = GridManager.Instance.BlockGrid[col].Column.Count - 1; i >= 0; i--)
+    Block targetBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == MergeData.TargetBlock.gridPosition);
+    Block leftBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == MergeData.LeftBlock?.gridPosition);
+    Block rightBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == MergeData.RightBlock?.gridPosition);
+    Block bottomBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == MergeData.BottomBlock?.gridPosition);
+    switch (MergeData.Direction)
     {
-      if (down)
-      {
-        yield return DownwardMerge(col, i);
-      }
-      else
-      {
-        yield return SideMerge(col, i);
-      }
-    }
-  }
+      case MergeDirection.Left:
+        yield return targetBlock.Merge(leftBlock);
+        break;
 
-  IEnumerator CheckLeftColumns(int col, bool down = true)
-  {
-    for (int i = col - 1; i >= 0; i--)
-    {
-      for (int j = GridManager.Instance.BlockGrid[i].Column.Count - 1; j >= 0; j--)
-      {
-        if (down)
-        {
-          yield return DownwardMerge(i, j);
-        }
-        else
-        {
-          yield return SideMerge(i, j);
-        }
-      }
-    }
-  }
+      case MergeDirection.Right:
+        yield return targetBlock.Merge(rightBlock);
+        break;
 
-  IEnumerator CheckRightColumns(int col, bool down = true)
-  {
-    for (int i = col + 1; i < GridManager.Instance.BlockGrid.Count; i++)
-    {
-      for (int j = GridManager.Instance.BlockGrid[i].Column.Count - 1; j >= 0; j--)
-      {
-        if (down)
-        {
-          yield return DownwardMerge(i, j);
-        }
-        else
-        {
-          yield return SideMerge(i, j);
-        }
-      }
-    }
-  }
+      case MergeDirection.Bottom:
+        yield return targetBlock.Merge(bottomBlock);
+        break;
 
-  IEnumerator DownwardMerge(int x, int y)
-  {
-    if (GridManager.Instance.IsEmpty(new Vector2Int(x, y)))
-      yield break;
+      case MergeDirection.LeftRight:
+        yield return targetBlock.Merge(leftBlock, rightBlock);
+        break;
 
-    // Check if the block above and below are valid positions
-    Vector2Int currPos = new(x, y);
-    Vector2Int belowPos = new(x, y + 1);
+      case MergeDirection.LeftBottom:
+        yield return targetBlock.Merge(leftBlock, bottomBlock);
+        break;
 
-    if (!GridManager.Instance.IsValidPosition(currPos) || !GridManager.Instance.IsValidPosition(belowPos))
-      yield break;
+      case MergeDirection.RightBottom:
+        yield return targetBlock.Merge(rightBlock, bottomBlock);
+        break;
 
-    var blockAbove = GridManager.Instance.GetBlockData(currPos);
-    var blockBelow = GridManager.Instance.GetBlockData(belowPos);
-
-    if (blockAbove.value == 0 || blockBelow.value == 0)
-      yield break;
-
-    if (blockAbove != null && blockBelow != null && blockAbove.value == blockBelow.value)
-    {
-      // Debug.Log($"Merging {blockAbove.gridPosition} and {blockBelow.gridPosition}");
-      yield return GridManager.Instance.BlockList.Find(b => b.GridPos == belowPos).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == currPos));
-      didDownwardMerge = true;
-      yield return new WaitForSecondsRealtime(fallDuration);
-    }
-  }
-
-  private IEnumerator HandleSideMerges(int ColIndex)
-  {
-    yield return CheckCenterColumn(ColIndex, false);
-    yield return CheckLeftColumns(ColIndex, false);
-    yield return CheckRightColumns(ColIndex, false);
-  }
-
-  IEnumerator SideMerge(int x, int y)
-  {
-    if (GridManager.Instance.IsEmpty(new Vector2Int(x, y)))
-      yield break;
-
-    // Check if the block to the left and right are valid positions
-    Vector2Int leftPos = new Vector2Int(x - 1, y);
-    Vector2Int rightPos = new Vector2Int(x + 1, y);
-
-    if (GridManager.Instance.IsEmpty(leftPos) && GridManager.Instance.IsEmpty(rightPos))
-      yield break;
-
-    var leftBlock = GridManager.Instance.GetBlockData(leftPos);
-    var rightBlock = GridManager.Instance.GetBlockData(rightPos);
-    var middleBlock = GridManager.Instance.GetBlockData(new Vector2Int(x, y));
-
-    if (rightBlock?.value == middleBlock?.value && leftBlock?.value == middleBlock?.value)
-    {
-      // Debug.Log("Merging left and right");
-      // Debug.Log("Merging " + middleBlock?.gridPosition + " and " + leftBlock?.gridPosition + " and " + rightBlock?.gridPosition);
-      yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock?.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == leftBlock?.gridPosition), GridManager.Instance.BlockList.Find(b => b.GridPos == rightBlock?.gridPosition));
-      didSideMerge = true;
-      yield return new WaitForSecondsRealtime(fallDuration);
-    }
-    if (leftBlock?.value == middleBlock?.value)
-    {
-      // Debug.Log("Merging left");
-      // Debug.Log("Merging " + middleBlock?.gridPosition + " and " + leftBlock?.gridPosition);
-      yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock?.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == leftBlock?.gridPosition), true);
-      didSideMerge = true;
-      yield return new WaitForSecondsRealtime(fallDuration);
-    }
-    if (rightBlock?.value == middleBlock?.value)
-    {
-      // Debug.Log("Merging right");
-      // Debug.Log("Merging " + middleBlock?.gridPosition + " and " + rightBlock?.gridPosition);
-      yield return GridManager.Instance.BlockList.Find(b => b.GridPos == middleBlock?.gridPosition).MergeBlock(GridManager.Instance.BlockList.Find(b => b.GridPos == rightBlock?.gridPosition), true);
-      didSideMerge = true;
-      yield return new WaitForSecondsRealtime(fallDuration);
+      case MergeDirection.LeftRightBottom:
+        yield return targetBlock.Merge(leftBlock, rightBlock, bottomBlock);
+        break;
     }
   }
 }

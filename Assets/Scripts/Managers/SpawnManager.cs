@@ -60,7 +60,7 @@ public class SpawnManager : MonoBehaviour
     CurrentBlock = blockScript;
 
 
-    if(!InputManager.Instance.enabled)
+    if (!InputManager.Instance.enabled)
       InputManager.Instance.enabled = true;
     InputManager.Instance.setBlock(Block.transform);
     GridManager.Instance.BlockList.Add(blockScript);

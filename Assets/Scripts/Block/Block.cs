@@ -11,7 +11,7 @@ public class Block : MonoBehaviour
   internal Vector2Int GridPos;
   private Image BlockImage;
   private TMP_Text BlockNumberText;
-  
+
   private void Awake()
   {
     BlockImage = GetComponent<Image>();
@@ -31,7 +31,7 @@ public class Block : MonoBehaviour
 
   internal void SetValue(int index)
   {
-    if(index >= BoardManager.Instance.BlockNumbers.Count)
+    if (index >= BoardManager.Instance.BlockNumbers.Count)
     {
       BoardManager.Instance.CheckAndExpandNumbers();
     }
@@ -44,28 +44,17 @@ public class Block : MonoBehaviour
   {
     GridPos = pos;
   }
-  
-  internal IEnumerator MergeBlock(Block targetBlock, bool horizontal = false)
+
+  internal IEnumerator Merge(Block targetBlock)
   {
-    if (!horizontal)
-    {
-      targetBlock.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
-      yield return targetBlock.transform.DOLocalMoveY(transform.localPosition.y, 0.1f).SetEase(Ease.Linear).WaitForCompletion();
-      GridManager.Instance.RemoveBlock(targetBlock.GridPos);
-      Value *= 2;
-      GridManager.Instance.SetBlockData(this, GridPos, Value);
-    }
-    else
-    {
-      targetBlock.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
-      yield return targetBlock.transform.DOLocalMoveX(transform.localPosition.x, 0.1f).SetEase(Ease.Linear).WaitForCompletion();
-      GridManager.Instance.RemoveBlock(targetBlock.GridPos);
-      Value *= 2;
-      GridManager.Instance.SetBlockData(this, GridPos, Value);
-    }
+    targetBlock.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
+    yield return targetBlock.transform.DOLocalMove(transform.localPosition, 0.1f).SetEase(Ease.Linear).WaitForCompletion();
+    GridManager.Instance.RemoveBlock(targetBlock.GridPos);
+    Value *= 2;
+    GridManager.Instance.SetBlockData(this, GridPos, Value);
   }
 
-  internal IEnumerator MergeBlock(Block leftBlock, Block rightBlock)
+  internal IEnumerator Merge(Block leftBlock, Block rightBlock)
   {
     leftBlock.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
     rightBlock.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
@@ -76,5 +65,55 @@ public class Block : MonoBehaviour
     Value *= 4;
     GridManager.Instance.SetBlockData(this, GridPos, Value);
   }
+
+  internal IEnumerator Merge(Block leftBlock, Block rightBlock, Block bottomBlock)
+  {
+    leftBlock.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
+    rightBlock.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
+    bottomBlock.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
+    
+    leftBlock.transform.DOLocalMoveX(transform.localPosition.x, 0.1f);
+    rightBlock.transform.DOLocalMoveX(transform.localPosition.x, 0.1f).SetEase(Ease.Linear).WaitForCompletion();
+    yield return bottomBlock.transform.DOLocalMoveY(transform.localPosition.y, 0.1f).SetEase(Ease.Linear).WaitForCompletion();
+    
+    GridManager.Instance.RemoveBlock(leftBlock.GridPos);
+    GridManager.Instance.RemoveBlock(rightBlock.GridPos);
+    GridManager.Instance.RemoveBlock(bottomBlock.GridPos);
+    
+    Value *= 6;
+    GridManager.Instance.SetBlockData(this, GridPos, Value);
+  }
+
+  // internal IEnumerator MergeBlock(Block targetBlock, bool horizontal = false)
+  // {
+  //   if (!horizontal)
+  //   {
+  //     targetBlock.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
+  //     yield return targetBlock.transform.DOLocalMoveY(transform.localPosition.y, 0.1f).SetEase(Ease.Linear).WaitForCompletion();
+  //     GridManager.Instance.RemoveBlock(targetBlock.GridPos);
+  //     Value *= 2;
+  //     GridManager.Instance.SetBlockData(this, GridPos, Value);
+  //   }
+  //   else
+  //   {
+  //     targetBlock.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
+  //     yield return targetBlock.transform.DOLocalMoveX(transform.localPosition.x, 0.1f).SetEase(Ease.Linear).WaitForCompletion();
+  //     GridManager.Instance.RemoveBlock(targetBlock.GridPos);
+  //     Value *= 2;
+  //     GridManager.Instance.SetBlockData(this, GridPos, Value);
+  //   }
+  // }
+
+  // internal IEnumerator MergeBlock(Block leftBlock, Block rightBlock)
+  // {
+  //   leftBlock.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
+  //   rightBlock.BlockImage.DOFade(0, 0.1f).SetEase(Ease.Linear);
+  //   leftBlock.transform.DOLocalMoveX(transform.localPosition.x, 0.1f);
+  //   yield return rightBlock.transform.DOLocalMoveX(transform.localPosition.x, 0.1f).SetEase(Ease.Linear).WaitForCompletion();
+  //   GridManager.Instance.RemoveBlock(leftBlock.GridPos);
+  //   GridManager.Instance.RemoveBlock(rightBlock.GridPos);
+  //   Value *= 4;
+  //   GridManager.Instance.SetBlockData(this, GridPos, Value);
+  // }
 }
  

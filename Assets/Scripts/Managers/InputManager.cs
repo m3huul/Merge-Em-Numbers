@@ -15,24 +15,32 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
       Instance = this;
     }
   }
-  void BlockMovement(int currCol, int targetCol)
+  void BlockMovement(int currCol, int targetCol, bool init = false)
   {
     BlockToMoveData = GridManager.Instance.GetDroppableBlockData(BlockTransform, currCol, targetCol);
 
-    if (BlockToMoveData == null)
+    if(BlockToMoveData == null)
     {
-      BoardManager.Instance.KillGame();
-      BlockTransform = null;
+      if (init)
+      {
+        Debug.Log("No Block To Move To");
+        BoardManager.Instance.KillGame();
+      }
+      else
+      {
+        Debug.LogError("No Block To Move To. Column Index: " + currCol + " to " + targetCol);
+      }
       return;
     }
-    float duration = CalculateDuration(BlockToMoveData.boardPosition, BoardManager.Instance.basePullDownSpeed);
+
+    float duration = CalculateDuration(BlockToMoveData?.boardPosition, BoardManager.Instance.basePullDownSpeed);
     StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, duration));
   }
   internal void setBlock(Transform blockTransform)
   {
     BlockTransform = blockTransform;
 
-    BlockMovement(IColumnIndex, IColumnIndex);
+    BlockMovement(IColumnIndex, IColumnIndex, true);
   }
 
   public void OnPointerDown(PointerEventData eventData)

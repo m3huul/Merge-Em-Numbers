@@ -9,13 +9,13 @@ public class BoardManager : MonoBehaviour
   public static BoardManager Instance;
   [SerializeField] internal List<int> BlockNumbers = new();
   [SerializeField] internal List<Color> BlockColors = new();
+  [SerializeField] internal List<MergeData> MergeData;
   [SerializeField] internal float basePullDownSpeed = 3f;
   [SerializeField] internal float fastPullDownSpeed = 0.05f;
   [SerializeField] private float fallDuration = 0.05f;
-  [SerializeField] private MergeData MergeData;
+  [SerializeField] private Button RestartButton;
   internal int FocusedColumnIndex = 2;
   private Tween CurrBlockTween;
-  [SerializeField] private Button RestartButton;
   void Awake()
   {
     if (Instance == null)
@@ -134,12 +134,14 @@ public class BoardManager : MonoBehaviour
       // Debug.Log("Block Dropped at : " + MoveToBlock.gridPosition.ToString());
       BlockToPull.transform.position = MoveToBlock.boardPosition.position;
       GridManager.Instance.SetBlockDataOnTheGrid(BlockToPull, MoveToBlock.gridPosition);
-      if (GridManager.Instance.CheckBlockForMerge(MoveToBlock.gridPosition, out MergeData))
+      if (GridManager.Instance.CheckBlockForMerge(MoveToBlock.gridPosition, out MergeData data))
       {
+        MergeData.Add(data);
         StartCascade();
       }
       else
       {
+        MergeData = new();
         SpawnManager.Instance.SpawnNextBlock();
       }
     })
@@ -159,57 +161,62 @@ public class BoardManager : MonoBehaviour
 
   private IEnumerator CascadeRoutine()
   {
-    while (MergeData.Direction != MergeDirection.None)
+    while (MergeData.Count>0)
     {
       yield return new WaitForSecondsRealtime(fallDuration);
       yield return Merge();
       yield return GridManager.Instance.MoveAllBlocksDown();
-      bool cont = GridManager.Instance.CheckBlocksForMerge(out MergeData);
-      // if (cont)
-      // {
-      //   Debug.Log("Cascade Continue");
-      // }
+      GridManager.Instance.CheckBlocksForMerge();
     }
-
     SpawnManager.Instance.SpawnNextBlock();
   }
 
   IEnumerator Merge()
   {
-    Block targetBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == MergeData.TargetBlock.gridPosition);
-    Block leftBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == MergeData.LeftBlock?.gridPosition);
-    Block rightBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == MergeData.RightBlock?.gridPosition);
-    Block bottomBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == MergeData.BottomBlock?.gridPosition);
-    switch (MergeData.Direction)
+    foreach(MergeData data in MergeData)
     {
-      case MergeDirection.Left:
-        yield return targetBlock.Merge(leftBlock);
-        break;
+      Block targetBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == data.TargetBlock.gridPosition);
+      Block leftBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == data.LeftBlock?.gridPosition);
+      Block rightBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == data.RightBlock?.gridPosition);
+      Block bottomBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == data.BottomBlock?.gridPosition);
+      switch (data.Direction)
+      {
+        case MergeDirection.Left:
+          Debug.Log("Merging Left : " + targetBlock.GridPos + " with " + leftBlock.GridPos);
+          yield return targetBlock.Merge(leftBlock);
+          break;
 
-      case MergeDirection.Right:
-        yield return targetBlock.Merge(rightBlock);
-        break;
+        case MergeDirection.Right:
+          Debug.Log("Merging Right : " + targetBlock.GridPos + " with " + rightBlock.GridPos);
+          yield return targetBlock.Merge(rightBlock);
+          break;
 
-      case MergeDirection.Bottom:
-        yield return targetBlock.Merge(bottomBlock);
-        break;
+        case MergeDirection.Bottom:
+          Debug.Log("Merging Bottom : " + targetBlock.GridPos + " with " + bottomBlock.GridPos);
+          yield return targetBlock.Merge(bottomBlock);
+          break;
 
-      case MergeDirection.LeftRight:
-        yield return targetBlock.Merge(leftBlock, rightBlock);
-        break;
+        case MergeDirection.LeftRight:
+          Debug.Log("Merging Left and Right : " + targetBlock.GridPos + " with " + leftBlock.GridPos + " and " + rightBlock.GridPos);
+          yield return targetBlock.Merge(leftBlock, rightBlock);
+          break;
 
-      case MergeDirection.LeftBottom:
-        yield return targetBlock.Merge(leftBlock, bottomBlock);
-        break;
+        case MergeDirection.LeftBottom:
+          Debug.Log("Merging Left and Bottom : " + targetBlock.GridPos + " with " + leftBlock.GridPos + " and " + bottomBlock.GridPos);
+          yield return targetBlock.Merge(leftBlock, bottomBlock);
+          break;
 
-      case MergeDirection.RightBottom:
-        yield return targetBlock.Merge(rightBlock, bottomBlock);
-        break;
+        case MergeDirection.RightBottom:
+          Debug.Log("Merging Right and Bottom : " + targetBlock.GridPos + " with " + rightBlock.GridPos + " and " + bottomBlock.GridPos);
+          yield return targetBlock.Merge(rightBlock, bottomBlock);
+          break;
 
-      case MergeDirection.LeftRightBottom:
-        yield return targetBlock.Merge(leftBlock, rightBlock, bottomBlock);
-        break;
+        case MergeDirection.LeftRightBottom:
+          Debug.Log("Merging Left, Right and Bottom : " + targetBlock.GridPos + " with " + leftBlock.GridPos + ", " + rightBlock.GridPos + " and " + bottomBlock.GridPos);
+          yield return targetBlock.Merge(leftBlock, rightBlock, bottomBlock);
+          break;
+      }
     }
-  }
+    }
 }
 

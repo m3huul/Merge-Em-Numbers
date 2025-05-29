@@ -11,7 +11,7 @@ public class GridManager : MonoBehaviour
   [SerializeField] internal List<BoardBlocks> BlockGrid; //List of all block GO's in the grid  Col, Row
   [SerializeField] internal List<Block> BlockList; //List of all block GO's in the grid
   [SerializeField] private float EmptyDroppableOffset = 0.1f; // Offset to check if the block can be dropped
-  [SerializeField] internal MergeData MergeData;
+  
   private void Awake()
   {
     Instance = this;
@@ -113,11 +113,7 @@ public class GridManager : MonoBehaviour
         return blockData;
       }
     }
-    else
-    {
       return GetMovableBlockData(currentBlockPosition, currCol);
-    }
-    return null;
   }
 
   internal IEnumerator MoveAllBlocksDown()
@@ -147,66 +143,73 @@ public class GridManager : MonoBehaviour
     }
   }
 
-  internal bool CheckBlocksForMerge(out MergeData mergeData)
+  internal bool CheckBlocksForMerge()
   {
-    mergeData = new MergeData();
-
-    List<int> affectedColumn = new();
-    switch (MergeData.Direction)
-    {
-      case MergeDirection.Left:
-        affectedColumn.Add(MergeData.TargetBlock.gridPosition.x);
-        affectedColumn.Add(MergeData.LeftBlock.gridPosition.x);
-        break;
-
-      case MergeDirection.Right:
-        affectedColumn.Add(MergeData.TargetBlock.gridPosition.x);
-        affectedColumn.Add(MergeData.RightBlock.gridPosition.x);
-        break;
-
-      case MergeDirection.Bottom:
-        affectedColumn.Add(MergeData.TargetBlock.gridPosition.x);
-        break;
-
-      case MergeDirection.LeftRight:
-        affectedColumn.Add(MergeData.TargetBlock.gridPosition.x);
-        affectedColumn.Add(MergeData.LeftBlock.gridPosition.x);
-        affectedColumn.Add(MergeData.RightBlock.gridPosition.x);
-        break;
-
-      case MergeDirection.LeftBottom:
-        affectedColumn.Add(MergeData.TargetBlock.gridPosition.x);
-        affectedColumn.Add(MergeData.LeftBlock.gridPosition.x);
-        break;
-
-      case MergeDirection.RightBottom:
-        affectedColumn.Add(MergeData.TargetBlock.gridPosition.x);
-        affectedColumn.Add(MergeData.RightBlock.gridPosition.x);
-        break;
-
-      case MergeDirection.LeftRightBottom:
-        affectedColumn.Add(MergeData.TargetBlock.gridPosition.x);
-        affectedColumn.Add(MergeData.LeftBlock.gridPosition.x);
-        affectedColumn.Add(MergeData.RightBlock.gridPosition.x);
-        break;
-    }
-
-    foreach (int col in affectedColumn)
-    {
-      for (int row = 0; row < height; row++)
+    HashSet<int> affectedColumn = new();
+    foreach (MergeData data in BoardManager.Instance.MergeData)
+    { 
+      switch (data.Direction)
       {
-        Vector2Int POI = new(col, row);
-        if (CheckBlockForMerge(POI, out mergeData))
-        {
-          MergeData = mergeData;
-          return true;
-        }
+        case MergeDirection.Left:
+          affectedColumn.Add(data.TargetBlock.gridPosition.x);
+          affectedColumn.Add(data.LeftBlock.gridPosition.x);
+          break;
+
+        case MergeDirection.Right:
+          affectedColumn.Add(data.TargetBlock.gridPosition.x);
+          affectedColumn.Add(data.RightBlock.gridPosition.x);
+          break;
+
+        case MergeDirection.Bottom:
+          affectedColumn.Add(data.TargetBlock.gridPosition.x);
+          break;
+
+        case MergeDirection.LeftRight:
+          affectedColumn.Add(data.TargetBlock.gridPosition.x);
+          affectedColumn.Add(data.LeftBlock.gridPosition.x);
+          affectedColumn.Add(data.RightBlock.gridPosition.x);
+          break;
+
+        case MergeDirection.LeftBottom:
+          affectedColumn.Add(data.TargetBlock.gridPosition.x);
+          affectedColumn.Add(data.LeftBlock.gridPosition.x);
+          break;
+
+        case MergeDirection.RightBottom:
+          affectedColumn.Add(data.TargetBlock.gridPosition.x);
+          affectedColumn.Add(data.RightBlock.gridPosition.x);
+          break;
+
+        case MergeDirection.LeftRightBottom:
+          affectedColumn.Add(data.TargetBlock.gridPosition.x);
+          affectedColumn.Add(data.LeftBlock.gridPosition.x);
+          affectedColumn.Add(data.RightBlock.gridPosition.x);
+          break;
       }
     }
 
-    // Debug.Log("No blocks found for merge in the affected columns.");
-    mergeData.Direction = MergeDirection.None;
-    MergeData = mergeData;
+    BoardManager.Instance.MergeData.Clear();
+    if (affectedColumn.Count > 0)
+    {  
+      foreach (int col in affectedColumn)
+      {
+        for (int row = 0; row < height; row++)
+        {
+          Vector2Int POI = new(col, row);
+          if (CheckBlockForMerge(POI, out MergeData data))
+          {
+            BoardManager.Instance.MergeData.Add(data);
+            break;
+          }
+        }
+      }
+
+      if(BoardManager.Instance.MergeData.Count > 0)
+      {
+        return true;
+      }
+    }
+
     return false;
   }
 
@@ -216,18 +219,35 @@ public class GridManager : MonoBehaviour
     if (POI == null || !IsValidPosition(POI) || IsEmpty(POI))
     {
       // Debug.LogError("POI is not set or invalid.");
-      mergeData.Direction = MergeDirection.None;
-      MergeData = mergeData;
+      mergeData = null;
       return false;
     }
     BlockData targetBlock = GetBlockData(POI);
+    if (targetBlock !=null && CheckBlockAleradyInMerge(targetBlock))
+    {
+      Debug.Log("Block already in merge: " + targetBlock.gridPosition);
+      mergeData = null;
+      return false;
+    }
+
     BlockData leftBlock = GetBlockData(new Vector2Int(POI.x - 1, POI.y));
+    if (leftBlock != null && CheckBlockAleradyInMerge(leftBlock))
+    {
+      leftBlock = null;
+    }
+
     BlockData rightBlock = GetBlockData(new Vector2Int(POI.x + 1, POI.y));
+    if(rightBlock != null && CheckBlockAleradyInMerge(rightBlock))
+    {
+      rightBlock = null;
+    }
+
     BlockData bottomBlock = GetBlockData(new Vector2Int(POI.x, POI.y + 1));
-    // Debug.Log("Target Block: " + targetBlock.gridPosition + " Value: " + targetBlock.value);
-    // Debug.Log("Left Block: " + leftBlock?.gridPosition + " Value: " + leftBlock?.value);
-    // Debug.Log("Right Block: " + rightBlock?.gridPosition + " Value: " + rightBlock?.value);
-    // Debug.Log("Bottom Block: " + bottomBlock?.gridPosition + " Value: " + bottomBlock?.value);
+    if (bottomBlock != null && CheckBlockAleradyInMerge(bottomBlock))
+    {
+      bottomBlock = null;
+    }
+
     if (targetBlock?.value == leftBlock?.value && leftBlock?.value == rightBlock?.value && rightBlock?.value == bottomBlock?.value)
     {
       mergeData.LeftBlock = leftBlock;
@@ -235,7 +255,6 @@ public class GridManager : MonoBehaviour
       mergeData.BottomBlock = bottomBlock;
       mergeData.TargetBlock = targetBlock;
       mergeData.Direction = MergeDirection.LeftRightBottom;
-      MergeData = mergeData;
       return true;
     }
     else if (targetBlock?.value == leftBlock?.value && leftBlock?.value == rightBlock?.value)
@@ -244,7 +263,6 @@ public class GridManager : MonoBehaviour
       mergeData.RightBlock = rightBlock;
       mergeData.TargetBlock = targetBlock;
       mergeData.Direction = MergeDirection.LeftRight;
-      MergeData = mergeData;
       return true;
     }
     else if (targetBlock?.value == leftBlock?.value && leftBlock?.value == bottomBlock?.value)
@@ -253,7 +271,6 @@ public class GridManager : MonoBehaviour
       mergeData.BottomBlock = bottomBlock;
       mergeData.TargetBlock = targetBlock;
       mergeData.Direction = MergeDirection.LeftBottom;
-      MergeData = mergeData;
       return true;
     }
     else if (targetBlock?.value == rightBlock?.value && rightBlock?.value == bottomBlock?.value)
@@ -262,7 +279,6 @@ public class GridManager : MonoBehaviour
       mergeData.BottomBlock = bottomBlock;
       mergeData.TargetBlock = targetBlock;
       mergeData.Direction = MergeDirection.RightBottom;
-      MergeData = mergeData;
       return true;
     }
     else if (targetBlock?.value == leftBlock?.value)
@@ -270,7 +286,6 @@ public class GridManager : MonoBehaviour
       mergeData.LeftBlock = leftBlock;
       mergeData.TargetBlock = targetBlock;
       mergeData.Direction = MergeDirection.Left;
-      MergeData = mergeData;
       return true;
     }
     else if (targetBlock?.value == rightBlock?.value)
@@ -278,7 +293,6 @@ public class GridManager : MonoBehaviour
       mergeData.RightBlock = rightBlock;
       mergeData.TargetBlock = targetBlock;
       mergeData.Direction = MergeDirection.Right;
-      MergeData = mergeData;
       return true;
     }
     else if (targetBlock?.value == bottomBlock?.value)
@@ -286,15 +300,38 @@ public class GridManager : MonoBehaviour
       mergeData.BottomBlock = bottomBlock;
       mergeData.TargetBlock = targetBlock;
       mergeData.Direction = MergeDirection.Bottom;
-      MergeData = mergeData;
       return true;
     }
     else
     {
-      mergeData.Direction = MergeDirection.None;
-      MergeData = mergeData;
+      mergeData = null;
       return false;
     }
+  }
+
+
+  bool CheckBlockAleradyInMerge(BlockData blockData)
+  {
+    foreach (MergeData data in BoardManager.Instance.MergeData)
+    {
+      if (data.TargetBlock == blockData)
+      {
+        return true;
+      }
+      if(data.LeftBlock != null && data.LeftBlock == blockData)
+      {
+        return true;
+      }
+      if(data.RightBlock != null && data.RightBlock == blockData)
+      {
+        return true;
+      }
+      if(data.BottomBlock != null && data.BottomBlock == blockData)
+      {
+        return true;
+      }
+    }
+    return false;
   }
 
   internal void SetBlockDataOnTheGrid(Block block, Vector2Int position)

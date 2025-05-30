@@ -90,7 +90,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Value: 0
-  startPosiYOffset: 40
+  startPosiYOffset: 110
 --- !u!1 &7820189630558202863
 GameObject:
   m_ObjectHideFlags: 0

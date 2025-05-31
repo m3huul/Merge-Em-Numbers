@@ -143,7 +143,7 @@ public class GridManager : MonoBehaviour
     }
   }
 
-  internal bool CheckBlocksForMerge()
+  internal void CheckBlocksForMerge()
   {
     HashSet<int> affectedColumn = new();
     foreach (MergeData data in BoardManager.Instance.MergeData)
@@ -203,14 +203,7 @@ public class GridManager : MonoBehaviour
           }
         }
       }
-
-      if(BoardManager.Instance.MergeData.Count > 0)
-      {
-        return true;
-      }
     }
-
-    return false;
   }
 
   internal bool CheckBlockForMerge(Vector2Int POI, out MergeData mergeData)

@@ -29,12 +29,8 @@ public class BoardManager : MonoBehaviour
     });
 
     Time.timeScale = 1f;
-    Application.targetFrameRate = 60;
-  }
-
-  void Start()
-  {
-    ExpandNumAndColorList();
+    Application.targetFrameRate = -1;
+    ExpandNumAndColorList(32);
   }
 
   internal void KillGame()
@@ -66,14 +62,15 @@ public class BoardManager : MonoBehaviour
     return lastNumber * 2;
   }
 
-  void ExpandNumAndColorList()
+  internal int ExpandNumAndColorList(int value)
   {
-    for (int i = 0; i < 4; i++)
+    while (!BlockNumbers.Contains(value))
     {
       int newValue = GenerateNextNumber();
       BlockColors.Add(GetColorForValue(newValue));
       BlockNumbers.Add(newValue);
     }
+    return BlockNumbers.IndexOf(value);
   }
 
   internal Color GetColorForValue(int value)
@@ -93,28 +90,6 @@ public class BoardManager : MonoBehaviour
   {
     float hue = BlockNumbers.Count * 0.15f % 1;
     return Color.HSVToRGB(hue, 0.8f, 1.0f);
-  }
-
-  internal int CheckAndExpandNumbers(int Value)
-  {
-    ExpandNumAndColorList();
-
-    for (int i = 0; i < GridManager.Instance.BlockGrid.Count; i++)
-    {
-      for (int j = 0; j < GridManager.Instance.BlockGrid[i].Column.Count; j++)
-      {
-        int blockValue = GridManager.Instance.BlockGrid[i].Column[j].value;
-        if (blockValue == 0)
-          continue;
-        if (!BlockNumbers.Contains(blockValue))
-        {
-          ExpandNumAndColorList();
-          return BlockNumbers.IndexOf(Value);
-        }
-      }
-    }
-
-    return BlockNumbers.IndexOf(Value);
   }
 
   internal IEnumerator PullTheBlock(Block BlockToPull, BlockData MoveToBlock, float duration)
@@ -161,7 +136,7 @@ public class BoardManager : MonoBehaviour
 
   private IEnumerator CascadeRoutine()
   {
-    while (MergeData.Count>0)
+    while (MergeData.Count > 0)
     {
       yield return new WaitForSecondsRealtime(fallDuration);
       yield return Merge();
@@ -173,7 +148,7 @@ public class BoardManager : MonoBehaviour
 
   IEnumerator Merge()
   {
-    foreach(MergeData data in MergeData)
+    foreach (MergeData data in MergeData)
     {
       Block targetBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == data.TargetBlock.gridPosition);
       Block leftBlock = GridManager.Instance.BlockList.Find(b => b.GridPos == data.LeftBlock?.gridPosition);
@@ -217,6 +192,6 @@ public class BoardManager : MonoBehaviour
           break;
       }
     }
-    }
+  }
 }
 

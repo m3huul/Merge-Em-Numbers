@@ -22,10 +22,7 @@ public class Block : MonoBehaviour
   {
     Vector3 initPosi = GridManager.Instance.BlockGrid[InputManager.Instance.IColumnIndex].Column[0].boardPosition.position;
     Vector3 startPosi = initPosi + new Vector3(0, startPosiYOffset, 0);
-
     transform.position = startPosi;
-    GridPos = new(InputManager.Instance.IColumnIndex, GridManager.Instance.BlockGrid[0].Column.Count-1);
-
     SetValue(index);
   }
 
@@ -54,7 +51,7 @@ public class Block : MonoBehaviour
     int ValueIndex = BoardManager.Instance.BlockNumbers.IndexOf(Value);
     if (ValueIndex == -1)
     {
-      ValueIndex = BoardManager.Instance.CheckAndExpandNumbers(Value);
+      ValueIndex = BoardManager.Instance.ExpandNumAndColorList(Value);
     }
     SetValue(ValueIndex);
   }
@@ -75,7 +72,7 @@ public class Block : MonoBehaviour
     int ValueIndex = BoardManager.Instance.BlockNumbers.IndexOf(Value);
     if (ValueIndex == -1)
     {
-      ValueIndex = BoardManager.Instance.CheckAndExpandNumbers(Value);
+      ValueIndex = BoardManager.Instance.ExpandNumAndColorList(Value);
     }
     SetValue(ValueIndex);
   }
@@ -100,7 +97,7 @@ public class Block : MonoBehaviour
     int ValueIndex = BoardManager.Instance.BlockNumbers.IndexOf(Value);
     if (ValueIndex == -1)
     {
-      ValueIndex = BoardManager.Instance.CheckAndExpandNumbers(Value);
+      ValueIndex = BoardManager.Instance.ExpandNumAndColorList(Value);
     }
     SetValue(ValueIndex);
   }

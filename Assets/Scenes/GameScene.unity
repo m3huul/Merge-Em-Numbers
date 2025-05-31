@@ -905,13 +905,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3fbdd464eaef78046ae9f44261a8dd1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BlockNumbers: 02000000
+  BlockValues: 02000000
   BlockColors:
   - {r: 1, g: 0.47058824, b: 0.47843137, a: 1}
+  BaseDropSpeed: 120
+  FastDropSpeed: 0.1
+  CascadeDelay: 0.1
   MergeData: []
-  basePullDownSpeed: 120
-  fastPullDownSpeed: 0.1
-  fallDuration: 0.05
   RestartButton: {fileID: 1691821787}
 --- !u!4 &341955747
 Transform:

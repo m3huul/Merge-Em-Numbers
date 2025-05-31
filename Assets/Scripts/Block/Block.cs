@@ -29,8 +29,8 @@ public class Block : MonoBehaviour
   internal void SetValue(int index)
   {
     BlockImage.color = BoardManager.Instance.BlockColors[index];
-    Value = BoardManager.Instance.BlockNumbers[index];
-    BlockNumberText.text = BoardManager.Instance.BlockNumbers[index].ToString();
+    Value = BoardManager.Instance.BlockValues[index];
+    BlockNumberText.text = BoardManager.Instance.BlockValues[index].ToString();
   }
 
   internal void SetGridPosition(Vector2Int pos)
@@ -48,7 +48,7 @@ public class Block : MonoBehaviour
     Value *= 2;
     GridManager.Instance.SetBlockDataOnTheGrid(this, GridPos);
 
-    int ValueIndex = BoardManager.Instance.BlockNumbers.IndexOf(Value);
+    int ValueIndex = BoardManager.Instance.BlockValues.IndexOf(Value);
     if (ValueIndex == -1)
     {
       ValueIndex = BoardManager.Instance.ExpandNumAndColorList(Value);
@@ -69,7 +69,7 @@ public class Block : MonoBehaviour
     Value *= 4;
     GridManager.Instance.SetBlockDataOnTheGrid(this, GridPos);
 
-    int ValueIndex = BoardManager.Instance.BlockNumbers.IndexOf(Value);
+    int ValueIndex = BoardManager.Instance.BlockValues.IndexOf(Value);
     if (ValueIndex == -1)
     {
       ValueIndex = BoardManager.Instance.ExpandNumAndColorList(Value);
@@ -94,7 +94,7 @@ public class Block : MonoBehaviour
     Value *= 4;
     GridManager.Instance.SetBlockDataOnTheGrid(this, GridPos);
 
-    int ValueIndex = BoardManager.Instance.BlockNumbers.IndexOf(Value);
+    int ValueIndex = BoardManager.Instance.BlockValues.IndexOf(Value);
     if (ValueIndex == -1)
     {
       ValueIndex = BoardManager.Instance.ExpandNumAndColorList(Value);

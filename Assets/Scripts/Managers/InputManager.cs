@@ -24,7 +24,7 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
       if (init)
       {
         Debug.Log("No Block To Move To");
-        BoardManager.Instance.KillGame();
+        BoardManager.Instance.EndGame();
       }
       else
       {
@@ -33,8 +33,8 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
       return;
     }
 
-    float duration = CalculateDuration(BlockToMoveData?.boardPosition, BoardManager.Instance.basePullDownSpeed);
-    StartCoroutine(BoardManager.Instance.PullTheBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, duration));
+    float duration = CalculateDuration(BlockToMoveData?.boardPosition, BoardManager.Instance.BaseDropSpeed);
+    StartCoroutine(BoardManager.Instance.DropBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, duration));
   }
   internal void setBlock(Transform blockTransform)
   {
@@ -52,9 +52,9 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
   {
     if (BlockTransform != null && BlockToMoveData != null)
     {
-      BoardManager.Instance.FocusedColumnIndex = IColumnIndex;
+      BoardManager.Instance.CurrColumn = IColumnIndex;
       Block blockComponent = BlockTransform.GetComponent<Block>();
-      StartCoroutine(BoardManager.Instance.PullTheBlock(blockComponent, BlockToMoveData, BoardManager.Instance.fastPullDownSpeed));
+      StartCoroutine(BoardManager.Instance.DropBlock(blockComponent, BlockToMoveData, BoardManager.Instance.FastDropSpeed));
       BlockTransform = null;
     }
   }

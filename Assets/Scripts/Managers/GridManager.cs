@@ -135,7 +135,7 @@ public class GridManager : MonoBehaviour
             }
             Vector2Int currPos = BlockToMove.GridPos;
             // Debug.Log("Moving block at: " + BlockToMove.GridPos + " to: " + blockData.gridPosition);
-            yield return BoardManager.Instance.PullTheBlockDown(BlockToMove, blockData, BoardManager.Instance.fastPullDownSpeed);
+            yield return BoardManager.Instance.DropBlockInstantly(BlockToMove, blockData, BoardManager.Instance.FastDropSpeed);
             RemoveBlockFromGrid(currPos);
           }
         }

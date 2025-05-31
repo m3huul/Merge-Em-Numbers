@@ -50,7 +50,7 @@ public class SpawnManager : MonoBehaviour
   {
     if (GridManager.Instance.CheckGameEnd())
     {
-      BoardManager.Instance.KillGame();
+      BoardManager.Instance.EndGame();
       return;
     }
 

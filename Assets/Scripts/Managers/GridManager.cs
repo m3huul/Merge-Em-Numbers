@@ -218,20 +218,20 @@ public class GridManager : MonoBehaviour
     }
   }
 
-  internal bool TryGetMerge(Vector2Int POI, out MergeData result)
+  internal bool TryGetMerge(Vector2Int pos, out MergeData result)
   {
     result = null;
 
-    if (!IsValid(POI) || IsEmpty(POI))
+    if (!IsValid(pos) || IsEmpty(pos))
       return false;
 
-    BlockData center = GetBlockData(POI);
+    BlockData center = GetBlockData(pos);
     if (IsPartOfOngoingMerge(center))
       return false;
 
-    BlockData left = GetBlockData(new Vector2Int(POI.x - 1, POI.y));
-    BlockData right = GetBlockData(new Vector2Int(POI.x + 1, POI.y));
-    BlockData below = GetBlockData(new Vector2Int(POI.x, POI.y + 1));
+    BlockData left = GetBlockData(new Vector2Int(pos.x - 1, pos.y));
+    BlockData right = GetBlockData(new Vector2Int(pos.x + 1, pos.y));
+    BlockData below = GetBlockData(new Vector2Int(pos.x, pos.y + 1));
 
     if (left != null && IsPartOfOngoingMerge(left))
       left = null;

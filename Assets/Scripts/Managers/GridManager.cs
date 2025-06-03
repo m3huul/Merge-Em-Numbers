@@ -270,11 +270,9 @@ public class GridManager : MonoBehaviour
     {
       if (merge.TargetBlock == data || merge.LeftBlock == data || merge.RightBlock == data || merge.BottomBlock == data)
       {
-        Debug.LogWarning("Block is part of an ongoing merge: " + data.gridPosition);
         return true;
       }
     }
-    Debug.Log("Block is not part of an ongoing merge: " + data.gridPosition);
     return false;
   }
 

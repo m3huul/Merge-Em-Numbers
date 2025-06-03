@@ -51,7 +51,6 @@ public class GridManager : MonoBehaviour
 
   internal void Reset()
   {
-    SpawnManager.Instance.ReturnAllItemsToPool();
     BlockList.Clear();
     foreach (var column in BlockGrid)
     {

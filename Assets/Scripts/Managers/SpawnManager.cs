@@ -26,6 +26,7 @@ public class SpawnManager : GenericObjectPool<Block>
 
   internal void Reset()
   {
+    ReturnAllItemsToPool();
     hasSpawnedFirstblock = false;
     SpawnNextBlock();
   }

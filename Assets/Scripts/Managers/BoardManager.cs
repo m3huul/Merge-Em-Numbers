@@ -27,12 +27,22 @@ public class BoardManager : MonoBehaviour
 
   void Awake()
   {
+    Application.targetFrameRate = -1;
     if (Instance == null) Instance = this;
 
+    if (!RestartButton)
+    {
+      Debug.LogError("RestartButton is not assigned in the inspector.");
+      return;
+    }
     RestartButton.onClick.AddListener(RestartGame);
 
-    Application.targetFrameRate = -1;
 
+    if (BlockValues.Count <= 0 && BlockColors.Count <= 0)
+    {
+      Debug.LogError("BlockValues and BlockColors are not initialized. Please set them in the inspector.");
+      return;
+    }   
     ExpandNumAndColorList(32);
   }
 

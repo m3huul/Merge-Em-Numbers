@@ -19,12 +19,12 @@ public class GridManager : MonoBehaviour
   private void Awake()
   {
     Instance = this;
+    
     if (!GridParent)
     {
       Debug.LogError("GridParent is not assigned in the inspector.");
       return;
     }
-
     InitializeGrid();
   }
 

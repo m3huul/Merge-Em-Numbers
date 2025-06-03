@@ -14,10 +14,7 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
 
   void Awake()
   {
-    if (Instance == null)
-    {
-      Instance = this;
-    }
+    Instance = this;
   }
 
   #region Input Events

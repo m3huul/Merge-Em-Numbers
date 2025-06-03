@@ -12,9 +12,11 @@ public class SpawnManager : GenericObjectPool<Block>
 
   protected override void Awake()
   {
-    if (Instance == null)
+    Instance = this;
+    if (!PredictedBlock)
     {
-      Instance = this;
+      Debug.LogError("PredictedBlock is not assigned in the inspector.");
+      return;
     }
     base.Awake();
   }
@@ -58,7 +60,6 @@ public class SpawnManager : GenericObjectPool<Block>
     }
 
     Block block = GetFromPool();
-    block.transform.position = GridManager.Instance.BlockGrid[InputManager.Instance.CurrentColumn].Cells[0].boardPosition.position;
     block.Init(SpawnedBlockIndex);
 
     if (!InputManager.Instance.enabled)

@@ -1,20 +1,22 @@
 using UnityEngine;
 
-public class SpawnManager : MonoBehaviour
+public class SpawnManager : GenericObjectPool<Block>
 {
   public static SpawnManager Instance;
+
+  [Header("Prediction Settings")]
   [SerializeField] private Block PredictedBlock;
-  [SerializeField] private GameObject BlockPrefab;
   [SerializeField] private int PredictedIndex = 0;
-  [SerializeField] private Transform NewBlocksParent;
-  [SerializeField] internal Block CurrentBlock;
-  bool initBlock = false;
-  private void Awake()
+
+  bool hasSpawnedFirstblock = false;
+
+  protected override void Awake()
   {
     if (Instance == null)
     {
       Instance = this;
     }
+    base.Awake();
   }
 
   private void Start()
@@ -24,16 +26,16 @@ public class SpawnManager : MonoBehaviour
 
   internal void Reset()
   {
-    initBlock = false;
+    hasSpawnedFirstblock = false;
     SpawnNextBlock();
   }
 
   internal void SpawnNextBlock()
   {
     // Debug.Log("Spawning Next Block");
-    if (!initBlock)
+    if (!hasSpawnedFirstblock)
     {
-      initBlock = true;
+      hasSpawnedFirstblock = true;
       PredictedIndex = Random.Range(0, 4);
       PredictedBlock.SetValue(PredictedIndex);
       Spawn(Random.Range(0, 4));
@@ -48,21 +50,19 @@ public class SpawnManager : MonoBehaviour
 
   void Spawn(int SpawnedBlockIndex)
   {
-    if (GridManager.Instance.CheckGameEnd())
+    if (GridManager.Instance.IsGameOver())
     {
       BoardManager.Instance.EndGame();
       return;
     }
 
-    GameObject Block = Instantiate(BlockPrefab, GridManager.Instance.BlockGrid[2].Column[0].boardPosition.position, Quaternion.identity, NewBlocksParent);
-    Block blockScript = Block.GetComponent<Block>();
-    blockScript.Init(SpawnedBlockIndex);
-    CurrentBlock = blockScript;
-
+    Block block = GetFromPool();
+    block.transform.position = GridManager.Instance.BlockGrid[InputManager.Instance.CurrentColumn].Cells[0].boardPosition.position;
+    block.Init(SpawnedBlockIndex);
 
     if (!InputManager.Instance.enabled)
       InputManager.Instance.enabled = true;
-    InputManager.Instance.setBlock(Block.transform);
-    GridManager.Instance.BlockList.Add(blockScript);
+    InputManager.Instance.SetActiveBlock(block.transform);
+    GridManager.Instance.BlockList.Add(block);
   }
 }

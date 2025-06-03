@@ -4,8 +4,12 @@ using UnityEngine.EventSystems;
 public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
 {
   public static InputManager Instance;
-  [SerializeField] internal int IColumnIndex = 2;
+
+  [Header("Current Input State")]
   [SerializeField] internal Transform BlockTransform;
+  [SerializeField] internal int CurrentColumn = 2;
+
+  [Header("Drop Prediction")]
   [SerializeField] private BlockData BlockToMoveData;
 
   void Awake()
@@ -15,11 +19,45 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
       Instance = this;
     }
   }
-  void BlockMovement(int currCol, int targetCol, bool init = false)
-  {
-    BlockToMoveData = GridManager.Instance.GetDroppableBlockData(BlockTransform, currCol, targetCol);
 
-    if(BlockToMoveData == null)
+  #region Input Events
+
+  public void OnPointerDown(PointerEventData eventData)
+  {
+    OnUserInput(eventData);
+  }
+
+  public void OnDrag(PointerEventData eventData)
+  {
+    OnUserInput(eventData);
+  }
+
+  public void OnPointerUp(PointerEventData eventData)
+  {
+    if (BlockTransform != null && BlockToMoveData != null)
+    {
+      BoardManager.Instance.CurrColumn = CurrentColumn;
+      Block blockComponent = BlockTransform.GetComponent<Block>();
+      StartCoroutine(BoardManager.Instance.DropBlock(blockComponent, BlockToMoveData, BoardManager.Instance.FastDropSpeed));
+      BlockTransform = null;
+    }
+  }
+
+  #endregion
+
+  #region Input Logic
+
+  internal void SetActiveBlock(Transform blockTransform)
+  {
+    BlockTransform = blockTransform;
+    TrySetDropPrediction(CurrentColumn, CurrentColumn, true);
+  }
+
+  void TrySetDropPrediction(int currCol, int targetCol, bool init = false)
+  {
+    BlockToMoveData = GridManager.Instance.GetDropTarget(BlockTransform, currCol, targetCol);
+
+    if (BlockToMoveData == null)
     {
       if (init)
       {
@@ -36,46 +74,18 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
     float duration = CalculateDuration(BlockToMoveData?.boardPosition, BoardManager.Instance.BaseDropSpeed);
     StartCoroutine(BoardManager.Instance.DropBlock(BlockTransform.GetComponent<Block>(), BlockToMoveData, duration));
   }
-  internal void setBlock(Transform blockTransform)
-  {
-    BlockTransform = blockTransform;
 
-    BlockMovement(IColumnIndex, IColumnIndex, true);
-  }
-
-  public void OnPointerDown(PointerEventData eventData)
-  {
-    OnUserInput(eventData);
-  }
-
-  public void OnPointerUp(PointerEventData eventData)
-  {
-    if (BlockTransform != null && BlockToMoveData != null)
-    {
-      BoardManager.Instance.CurrColumn = IColumnIndex;
-      Block blockComponent = BlockTransform.GetComponent<Block>();
-      StartCoroutine(BoardManager.Instance.DropBlock(blockComponent, BlockToMoveData, BoardManager.Instance.FastDropSpeed));
-      BlockTransform = null;
-    }
-  }
-
-  internal float CalculateDuration(Transform targetTransform, float speed)
+  float CalculateDuration(Transform targetTransform, float speed)
   {
     float distance = Vector3.Distance(BlockTransform.position, targetTransform.position);
     return distance / speed;
-  }
-
-
-  public void OnDrag(PointerEventData eventData)
-  {
-    OnUserInput(eventData);
   }
 
   private void OnUserInput(PointerEventData eventData)
   {
     if (BlockTransform != null)
     {
-      Transform closestColumnPosition = GridManager.Instance.BlockGrid[FindClosestColumnIndex(eventData.position.x)].Column[0].boardPosition;
+      Transform closestColumnPosition = GridManager.Instance.BlockGrid[FindClosestColumn(eventData.position.x)].Cells[0].boardPosition;
 
       // Move the block to the closest column's X position if found
       if (closestColumnPosition != null)
@@ -87,14 +97,14 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
     }
   }
 
-  private int FindClosestColumnIndex(float xPosition)
+  private int FindClosestColumn(float xPosition)
   {
     float closestDistance = float.MaxValue;
     int closestIndex = 0;
 
     for (int i = 0; i < GridManager.Instance.BlockGrid.Count; i++)
     {
-      float columnX = GridManager.Instance.BlockGrid[i].Column[0].boardPosition.position.x;
+      float columnX = GridManager.Instance.BlockGrid[i].Cells[0].boardPosition.position.x;
       float distance = Mathf.Abs(xPosition - columnX);
 
       if (distance < closestDistance)
@@ -104,20 +114,15 @@ public class InputManager : MonoBehaviour, IPointerDownHandler, IPointerUpHandle
       }
     }
 
-    if (closestIndex == IColumnIndex)
+    if (CurrentColumn != closestIndex)
     {
-      return closestIndex;
+      TrySetDropPrediction(CurrentColumn, closestIndex);
+      if (BlockToMoveData != null)
+        CurrentColumn = BlockToMoveData.gridPosition.x;
     }
 
-    // Debug.Log("Column Index Changed");
-
-    BlockMovement(IColumnIndex, closestIndex);
-    if (BlockToMoveData == null)
-    {
-      return IColumnIndex;
-    }
-
-    IColumnIndex = BlockToMoveData.gridPosition.x;
-    return BlockToMoveData.gridPosition.x;
+    return CurrentColumn;
   }
+
+  #endregion
 }

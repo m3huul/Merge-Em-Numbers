@@ -2654,10 +2654,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 301147e68550b4981b23f05aa7159201, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  InitialCount: 40
+  PrefabToPool: {fileID: 8110008378500762323, guid: 351ec6bc67853d24690928fcd3f9582f, type: 3}
+  ParentTransform: {fileID: 873260915}
   PredictedBlock: {fileID: 287996897}
-  BlockPrefab: {fileID: 2474122655813564630, guid: 351ec6bc67853d24690928fcd3f9582f, type: 3}
   PredictedIndex: 0
-  NewBlocksParent: {fileID: 873260915}
   CurrentBlock: {fileID: 0}
 --- !u!4 &949002255
 Transform:
@@ -5292,8 +5293,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33fa79553829460408f27ab7eec25cc0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IColumnIndex: 2
   BlockTransform: {fileID: 0}
+  CurrentColumn: 2
   BlockToMoveData:
     value: 0
     boardPosition: {fileID: 0}
@@ -5470,12 +5471,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2005f1dae7980429c8d7ebfc163d1c1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  width: 5
-  height: 8
+  GridWidth: 5
+  GridHeight: 8
   GridParent: {fileID: 1033645831}
   BlockGrid: []
   BlockList: []
-  EmptyDroppableOffset: 0
 --- !u!4 &2042668313
 Transform:
   m_ObjectHideFlags: 0

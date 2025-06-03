@@ -11,9 +11,9 @@ public class BoardManager : MonoBehaviour
   [Header("Game Settings")]
   [SerializeField] internal List<int> BlockValues = new();
   [SerializeField] internal List<Color> BlockColors = new();
-  [SerializeField] internal float BaseDropSpeed = 3f;
-  [SerializeField] internal float FastDropSpeed = 0.05f;
-  [SerializeField] private float CascadeDelay = 0.05f;
+  [SerializeField] internal float BaseDropSpeed = 120f;
+  [SerializeField] internal float FastDropSpeed = 0.1f;
+  [SerializeField] private float CascadeDelay = 0.1f;
 
   [Header("Merge Data")]
   [SerializeField] internal List<MergeData> MergeData;
@@ -71,8 +71,8 @@ public class BoardManager : MonoBehaviour
     {
       yield return new WaitForSecondsRealtime(CascadeDelay);
       yield return ExecuteMerges();
-      yield return GridManager.Instance.MoveAllBlocksDown();
-      GridManager.Instance.CheckBlocksForMerge();
+      yield return GridManager.Instance.ApplyGravityToBlocks();
+      GridManager.Instance.FindMergeableBlocks();
     }
     SpawnManager.Instance.SpawnNextBlock();
   }
@@ -96,9 +96,9 @@ public class BoardManager : MonoBehaviour
         InputManager.Instance.BlockTransform = null;
         InputManager.Instance.enabled = false;
         block.transform.position = destination.boardPosition.position;
-        GridManager.Instance.SetBlockDataOnTheGrid(block, destination.gridPosition);
+        GridManager.Instance.PlaceBlockOnGrid(block, destination.gridPosition);
 
-        if (GridManager.Instance.CheckBlockForMerge(destination.gridPosition, out MergeData data))
+        if (GridManager.Instance.TryGetMerge(destination.gridPosition, out MergeData data))
         {
           MergeData.Add(data);
           StartCascade();
@@ -115,7 +115,7 @@ public class BoardManager : MonoBehaviour
   {
     yield return BlockToPull.transform.DOLocalMoveY(BlockMoveTo.boardPosition.localPosition.y, duration)
       .SetEase(Ease.Linear).WaitForCompletion();
-    GridManager.Instance.SetBlockDataOnTheGrid(BlockToPull, BlockMoveTo.gridPosition);
+    GridManager.Instance.PlaceBlockOnGrid(BlockToPull, BlockMoveTo.gridPosition);
   }
 
   #endregion
@@ -212,4 +212,3 @@ public class BoardManager : MonoBehaviour
 
   #endregion
 }
-

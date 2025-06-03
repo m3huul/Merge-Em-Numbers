@@ -6,404 +6,285 @@ using UnityEngine;
 public class GridManager : MonoBehaviour
 {
   public static GridManager Instance;
-  [SerializeField] private int width = 5, height = 8;
+
+  [Header("Grid Settings")]
+  [SerializeField] private int GridWidth = 5;
+  [SerializeField] private int GridHeight = 8;
   [SerializeField] private Transform GridParent;
-  [SerializeField] internal List<BoardBlocks> BlockGrid; //List of all block GO's in the grid  Col, Row
+
+  [Header("Grid Data")]
+  [SerializeField] internal List<BoardColumn> BlockGrid; //List of all block GO's in the grid  Col, Row
   [SerializeField] internal List<Block> BlockList; //List of all block GO's in the grid
-  [SerializeField] private float EmptyDroppableOffset = 0.1f; // Offset to check if the block can be dropped
-  
+
   private void Awake()
   {
     Instance = this;
     if (!GridParent)
     {
       Debug.LogError("GridParent is not assigned in the inspector.");
+      return;
     }
-    else
+
+    InitializeGrid();
+  }
+
+  private void InitializeGrid()
+  {
+    BlockGrid = new();
+    for (int x = 0; x < GridWidth; x++)
     {
-      BlockGrid = new();
-      for (int i = 0; i < width; i++)
+      var column = new BoardColumn();
+      for (int y = 0; y < GridHeight; y++)
       {
-        BlockGrid.Add(new BoardBlocks());
-        for (int j = 0; j < height; j++)
+        var data = new BlockData
         {
-          BlockGrid[i].Column.Add(new BlockData());
-          BlockGrid[i].Column[j].boardPosition = GridParent.GetChild(i).GetChild(j);
-          BlockGrid[i].Column[j].gridPosition = new Vector2Int(i, j);
-        }
+          boardPosition = GridParent.GetChild(x).GetChild(y),
+          gridPosition = new Vector2Int(x, y)
+        };
+        column.Cells.Add(data);
       }
+      BlockGrid.Add(column);
     }
   }
+
+  #region Grid State
 
   internal void Reset()
   {
-    BlockList.ForEach(x => Destroy(x.gameObject));
+    SpawnManager.Instance.ReturnAllItemsToPool();
     BlockList.Clear();
-    for (int i = 0; i < BlockGrid.Count; i++)
+    foreach (var column in BlockGrid)
     {
-      for (int j = 0; j < BlockGrid[i].Column.Count; j++)
+      foreach (var cell in column.Cells)
       {
-        BlockGrid[i].Column[j].value = 0;
+        cell.value = 0;
       }
     }
   }
 
-  internal BlockData GetBlockData(Vector2Int position)
+  internal bool IsEmpty(Vector2Int pos) => IsValid(pos) && GetBlockData(pos).value == 0;
+
+  internal bool IsValid(Vector2Int pos) => pos.x >= 0 && pos.x < GridWidth && pos.y >= 0 && pos.y < GridHeight;
+
+  internal BlockData GetBlockData(Vector2Int pos) => IsValid(pos) ? BlockGrid[pos.x].Cells[pos.y] : null;
+
+  internal void PlaceBlockOnGrid(Block block, Vector2Int pos)
   {
-    if (IsValidPosition(position))
-    {
-      return BlockGrid[position.x].Column[position.y];
-    }
-    else
-    {
-      // Debug.LogError("Invalid position while getting block data.");
-      return null;
-    }
-  }
-
-  internal BlockData GetMovableBlockData(Transform currentBlockTransform, int col)
-  {
-    for (int i = BlockGrid[col].Column.Count - 1; i >= 0; i--)
-    {
-      if (IsEmpty(new Vector2Int(col, i)) && currentBlockTransform.position.y >= BlockGrid[col].Column[i].boardPosition.position.y + EmptyDroppableOffset)
-      {
-        return BlockGrid[col].Column[i];
-      }
-    }
-    return null;
-  }
-
-  internal BlockData GetMovableBlockData(int col, int row)
-  {
-    for (int i = row; i < height; i++)
-    {
-      if (IsEmpty(new Vector2Int(col, i)))
-      {
-        return BlockGrid[col].Column[i];
-      }
-    }
-    return null;
-  }
-
-  internal BlockData GetDroppableBlockData(Transform currentBlockPosition, int currCol, int colToMoveTo)
-  {
-    if (colToMoveTo > currCol)
-    {
-      BlockData nextColBlockData = GetMovableBlockData(currentBlockPosition, currCol + 1);
-      if (nextColBlockData == null)
-      {
-        return GetMovableBlockData(currentBlockPosition, currCol);
-      }
-      BlockData blockData = GetMovableBlockData(currentBlockPosition, colToMoveTo);
-      if (blockData != null)
-      {
-        return blockData;
-      }
-    }
-    else if (colToMoveTo < currCol)
-    {
-      BlockData prevColBlockData = GetMovableBlockData(currentBlockPosition, currCol - 1);
-      if (prevColBlockData == null)
-      {
-        return GetMovableBlockData(currentBlockPosition, currCol);
-      }
-      BlockData blockData = GetMovableBlockData(currentBlockPosition, colToMoveTo);
-      if (blockData != null)
-      {
-        return blockData;
-      }
-    }
-      return GetMovableBlockData(currentBlockPosition, currCol);
-  }
-
-  internal IEnumerator MoveAllBlocksDown()
-  {
-    for (int i = 0; i < BlockGrid.Count; i++)
-    {
-      for (int j = BlockGrid[i].Column.Count - 1; j >= 0; j--)
-      {
-        if (BlockGrid[i].Column[j].value != 0)
-        {
-          BlockData blockData = GetMovableBlockData(i, j);
-          if (blockData != null)
-          {
-            Block BlockToMove = BlockList.Find(x => x.GridPos == new Vector2Int(i, j));
-            if (BlockToMove == null)
-            {
-              Debug.LogError("Block to move is null.");
-              continue;
-            }
-            Vector2Int currPos = BlockToMove.GridPos;
-            // Debug.Log("Moving block at: " + BlockToMove.GridPos + " to: " + blockData.gridPosition);
-            yield return BoardManager.Instance.DropBlockInstantly(BlockToMove, blockData, BoardManager.Instance.FastDropSpeed);
-            RemoveBlockFromGrid(currPos);
-          }
-        }
-      }
-    }
-  }
-
-  internal void CheckBlocksForMerge()
-  {
-    HashSet<int> affectedColumn = new();
-    foreach (MergeData data in BoardManager.Instance.MergeData)
-    { 
-      switch (data.Direction)
-      {
-        case MergeDirection.Left:
-          affectedColumn.Add(data.TargetBlock.gridPosition.x);
-          affectedColumn.Add(data.LeftBlock.gridPosition.x);
-          break;
-
-        case MergeDirection.Right:
-          affectedColumn.Add(data.TargetBlock.gridPosition.x);
-          affectedColumn.Add(data.RightBlock.gridPosition.x);
-          break;
-
-        case MergeDirection.Bottom:
-          affectedColumn.Add(data.TargetBlock.gridPosition.x);
-          break;
-
-        case MergeDirection.LeftRight:
-          affectedColumn.Add(data.TargetBlock.gridPosition.x);
-          affectedColumn.Add(data.LeftBlock.gridPosition.x);
-          affectedColumn.Add(data.RightBlock.gridPosition.x);
-          break;
-
-        case MergeDirection.LeftBottom:
-          affectedColumn.Add(data.TargetBlock.gridPosition.x);
-          affectedColumn.Add(data.LeftBlock.gridPosition.x);
-          break;
-
-        case MergeDirection.RightBottom:
-          affectedColumn.Add(data.TargetBlock.gridPosition.x);
-          affectedColumn.Add(data.RightBlock.gridPosition.x);
-          break;
-
-        case MergeDirection.LeftRightBottom:
-          affectedColumn.Add(data.TargetBlock.gridPosition.x);
-          affectedColumn.Add(data.LeftBlock.gridPosition.x);
-          affectedColumn.Add(data.RightBlock.gridPosition.x);
-          break;
-      }
-    }
-
-    BoardManager.Instance.MergeData.Clear();
-    if (affectedColumn.Count > 0)
-    {  
-      foreach (int col in affectedColumn)
-      {
-        for (int row = 0; row < height; row++)
-        {
-          Vector2Int POI = new(col, row);
-          if (CheckBlockForMerge(POI, out MergeData data))
-          {
-            BoardManager.Instance.MergeData.Add(data);
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  internal bool CheckBlockForMerge(Vector2Int POI, out MergeData mergeData)
-  {
-    mergeData = new MergeData();
-    if (POI == null || !IsValidPosition(POI) || IsEmpty(POI))
-    {
-      // Debug.LogError("POI is not set or invalid.");
-      mergeData = null;
-      return false;
-    }
-    BlockData targetBlock = GetBlockData(POI);
-    if (targetBlock !=null && CheckBlockAleradyInMerge(targetBlock))
-    {
-      Debug.Log("Block already in merge: " + targetBlock.gridPosition);
-      mergeData = null;
-      return false;
-    }
-
-    BlockData leftBlock = GetBlockData(new Vector2Int(POI.x - 1, POI.y));
-    if (leftBlock != null && CheckBlockAleradyInMerge(leftBlock))
-    {
-      leftBlock = null;
-    }
-
-    BlockData rightBlock = GetBlockData(new Vector2Int(POI.x + 1, POI.y));
-    if(rightBlock != null && CheckBlockAleradyInMerge(rightBlock))
-    {
-      rightBlock = null;
-    }
-
-    BlockData bottomBlock = GetBlockData(new Vector2Int(POI.x, POI.y + 1));
-    if (bottomBlock != null && CheckBlockAleradyInMerge(bottomBlock))
-    {
-      bottomBlock = null;
-    }
-
-    if (targetBlock?.value == leftBlock?.value && leftBlock?.value == rightBlock?.value && rightBlock?.value == bottomBlock?.value)
-    {
-      mergeData.LeftBlock = leftBlock;
-      mergeData.RightBlock = rightBlock;
-      mergeData.BottomBlock = bottomBlock;
-      mergeData.TargetBlock = targetBlock;
-      mergeData.Direction = MergeDirection.LeftRightBottom;
-      return true;
-    }
-    else if (targetBlock?.value == leftBlock?.value && leftBlock?.value == rightBlock?.value)
-    {
-      mergeData.LeftBlock = leftBlock;
-      mergeData.RightBlock = rightBlock;
-      mergeData.TargetBlock = targetBlock;
-      mergeData.Direction = MergeDirection.LeftRight;
-      return true;
-    }
-    else if (targetBlock?.value == leftBlock?.value && leftBlock?.value == bottomBlock?.value)
-    {
-      mergeData.LeftBlock = leftBlock;
-      mergeData.BottomBlock = bottomBlock;
-      mergeData.TargetBlock = targetBlock;
-      mergeData.Direction = MergeDirection.LeftBottom;
-      return true;
-    }
-    else if (targetBlock?.value == rightBlock?.value && rightBlock?.value == bottomBlock?.value)
-    {
-      mergeData.RightBlock = rightBlock;
-      mergeData.BottomBlock = bottomBlock;
-      mergeData.TargetBlock = targetBlock;
-      mergeData.Direction = MergeDirection.RightBottom;
-      return true;
-    }
-    else if (targetBlock?.value == leftBlock?.value)
-    {
-      mergeData.LeftBlock = leftBlock;
-      mergeData.TargetBlock = targetBlock;
-      mergeData.Direction = MergeDirection.Left;
-      return true;
-    }
-    else if (targetBlock?.value == rightBlock?.value)
-    {
-      mergeData.RightBlock = rightBlock;
-      mergeData.TargetBlock = targetBlock;
-      mergeData.Direction = MergeDirection.Right;
-      return true;
-    }
-    else if (targetBlock?.value == bottomBlock?.value)
-    {
-      mergeData.BottomBlock = bottomBlock;
-      mergeData.TargetBlock = targetBlock;
-      mergeData.Direction = MergeDirection.Bottom;
-      return true;
-    }
-    else
-    {
-      mergeData = null;
-      return false;
-    }
-  }
-
-
-  bool CheckBlockAleradyInMerge(BlockData blockData)
-  {
-    foreach (MergeData data in BoardManager.Instance.MergeData)
-    {
-      if (data.TargetBlock == blockData)
-      {
-        return true;
-      }
-      if(data.LeftBlock != null && data.LeftBlock == blockData)
-      {
-        return true;
-      }
-      if(data.RightBlock != null && data.RightBlock == blockData)
-      {
-        return true;
-      }
-      if(data.BottomBlock != null && data.BottomBlock == blockData)
-      {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  internal void SetBlockDataOnTheGrid(Block block, Vector2Int position)
-  {
-    if (IsValidPosition(position))
-    {
-      BlockGrid[position.x].Column[position.y].value = block.Value;
-      block.SetGridPosition(position);
-    }
-    else
+    if (!IsValid(pos))
     {
       Debug.LogError("Invalid position while setting block data.");
+      return;
     }
-  }
 
-  void RemoveBlockFromGrid(Vector2Int position)
-  {
-    if (IsValidPosition(position))
-    {
-      // Debug.Log("Removing block value from grid at: " + position);
-      BlockGrid[position.x].Column[position.y].value = 0;
-    }
+    BlockGrid[pos.x].Cells[pos.y].value = block.Value;
+    block.SetGridPosition(pos);
   }
 
   internal void RemoveBlock(Vector2Int position)
   {
-    if (IsValidPosition(position))
+    if (!IsValid(position))
+      return;
+
+    BlockGrid[position.x].Cells[position.y].value = 0;
+    Block block = BlockList.Find(b => b.GridPos == position);
+    if (block == null)
     {
-      BlockGrid[position.x].Column[position.y].value = 0;
-      Block block = BlockList.Find(b => b.GridPos == position);
-      if (block == null)
-      {
-        Debug.LogError("Block to remove is null at position: " + position);
-        return;
-      }
-      BlockList.Remove(block);
-      Destroy(block.gameObject);
+      Debug.LogError("Block to remove is null at position: " + position);
+      return;
     }
-    else
-    {
-      Debug.LogError("Invalid position while removing block.");
-    }
+    BlockList.Remove(block);
+    SpawnManager.Instance.ReturnToPool(block);
   }
 
-  internal bool IsEmpty(Vector2Int position)
+  void ClearGridPosition(Vector2Int pos)
   {
-    if (IsValidPosition(position))
-    {
-      return BlockGrid[position.x].Column[position.y].value == 0;
-    }
-    else
-    {
-      // Debug.LogError("Invalid position while checking if empty.");
-      return true;
-    }
+    if (IsValid(pos))
+      BlockGrid[pos.x].Cells[pos.y].value = 0;
   }
 
-  internal bool IsValidPosition(Vector2Int position)
-  {
-    return position.x >= 0 && position.x < width && position.y >= 0 && position.y < height;
-  }
-
-  internal bool CheckGameEnd()
+  internal bool IsGameOver()
   {
     for (int i = 0; i < BlockGrid.Count; i++)
-    {
       if (!IsEmpty(new(i, 0)))
+        return true;
+
+    return false;
+  }
+
+  #endregion
+
+  #region Drop And Merge Logic
+
+  internal IEnumerator ApplyGravityToBlocks()
+  {
+    for (int col = 0; col < BlockGrid.Count; col++)
+    {
+      for (int row = BlockGrid[col].Cells.Count - 1; row >= 0; row--)
       {
+        if (BlockGrid[col].Cells[row].value != 0)
+        {
+          BlockData dropTarget = GetFirstEmptyBelow(col, row);
+          if (dropTarget != null)
+          {
+            Block block = BlockList.Find(x => x.GridPos == new Vector2Int(col, row));
+            if (block == null)
+            {
+              Debug.LogError("Block to move is null.");
+              continue;
+            }
+
+            // Debug.Log("Moving block at: " + BlockToMove.GridPos + " to: " + blockData.gridPosition);
+            Vector2Int currPos = block.GridPos;
+            yield return BoardManager.Instance.DropBlockInstantly(block, dropTarget, BoardManager.Instance.FastDropSpeed);
+            ClearGridPosition(currPos);
+          }
+        }
+      }
+    }
+  }
+
+  internal BlockData GetFirstEmptyBelow(int col, int row)
+  {
+    for (int i = row; i < GridHeight; i++)
+    {
+      if (IsEmpty(new Vector2Int(col, i)))
+      {
+        return BlockGrid[col].Cells[i];
+      }
+    }
+    return null;
+  }
+
+  internal BlockData GetDropTarget(Transform fallingBlock, int currCol, int targetCol)
+  {
+    if (targetCol != currCol)
+    {
+      if (targetCol > currCol)
+      {
+        var sideCheck = GetDroppableInColumn(fallingBlock, currCol + 1);
+        if (sideCheck != null) return GetDroppableInColumn(fallingBlock, targetCol);
+      }
+      else
+      {
+        var sideCheck = GetDroppableInColumn(fallingBlock, currCol - 1);
+        if (sideCheck != null) return GetDroppableInColumn(fallingBlock, targetCol);
+      }
+    }
+    return GetDroppableInColumn(fallingBlock, currCol);
+  }
+
+  internal BlockData GetDroppableInColumn(Transform block, int col)
+  {
+    for (int row = BlockGrid[col].Cells.Count - 1; row >= 0; row--)
+    {
+      Vector2Int pos = new(col, row);
+      if (IsEmpty(pos) && block.position.y >= GetBlockData(pos).boardPosition.position.y)
+        return GetBlockData(pos);
+    }
+    return null;
+  }
+
+  #endregion
+
+  #region Merge Checks
+
+  internal void FindMergeableBlocks()
+  {
+    HashSet<int> affectedColumn = new();
+    foreach (MergeData data in BoardManager.Instance.MergeData)
+    {
+      affectedColumn.Add(data.TargetBlock.gridPosition.x);
+      if (data.LeftBlock != null)
+        affectedColumn.Add(data.LeftBlock.gridPosition.x);
+      if (data.RightBlock != null)
+        affectedColumn.Add(data.RightBlock.gridPosition.x);
+      if (data.BottomBlock != null)
+        affectedColumn.Add(data.BottomBlock.gridPosition.x);
+    }
+
+    BoardManager.Instance.MergeData.Clear();
+
+    foreach (int col in affectedColumn)
+    {
+      for (int row = 0; row < GridHeight; row++)
+      {
+        Vector2Int POI = new(col, row);
+        if (TryGetMerge(POI, out MergeData data))
+        {
+          BoardManager.Instance.MergeData.Add(data);
+          break;
+        }
+      }
+    }
+  }
+
+  internal bool TryGetMerge(Vector2Int POI, out MergeData result)
+  {
+    result = null;
+
+    if (!IsValid(POI) || IsEmpty(POI))
+      return false;
+
+    BlockData center = GetBlockData(POI);
+    if (IsPartOfOngoingMerge(center))
+      return false;
+
+    BlockData left = GetBlockData(new Vector2Int(POI.x - 1, POI.y));
+    BlockData right = GetBlockData(new Vector2Int(POI.x + 1, POI.y));
+    BlockData below = GetBlockData(new Vector2Int(POI.x, POI.y + 1));
+
+    if (left != null && IsPartOfOngoingMerge(left))
+      left = null;
+
+    if (right != null && IsPartOfOngoingMerge(right))
+      right = null;
+
+    if (below != null && IsPartOfOngoingMerge(below))
+      below = null;
+
+    bool l = left?.value == center.value;
+    bool r = right?.value == center.value;
+    bool b = below?.value == center.value;
+
+    if (l && r && b)
+      result = new MergeData(center, left, right, below, MergeDirection.LeftRightBottom);
+    else if (l && r)
+      result = new MergeData(center, left, right, null, MergeDirection.LeftRight);
+    else if (l && b)
+      result = new MergeData(center, left, null, below, MergeDirection.LeftBottom);
+    else if (r && b)
+      result = new MergeData(center, null, right, below, MergeDirection.RightBottom);
+    else if (l)
+      result = new MergeData(center, left, null, null, MergeDirection.Left);
+    else if (r)
+      result = new MergeData(center, null, right, null, MergeDirection.Right);
+    else if (b)
+      result = new MergeData(center, null, null, below, MergeDirection.Bottom);
+
+    return result != null;
+  }
+
+  bool IsPartOfOngoingMerge(BlockData data)
+  {
+    foreach (var merge in BoardManager.Instance.MergeData)
+    {
+      if (merge.TargetBlock == data || merge.LeftBlock == data || merge.RightBlock == data || merge.BottomBlock == data)
+      {
+        Debug.LogWarning("Block is part of an ongoing merge: " + data.gridPosition);
         return true;
       }
     }
+    Debug.Log("Block is not part of an ongoing merge: " + data.gridPosition);
     return false;
   }
+
+  #endregion
 }
 
 [Serializable]
-public class BoardBlocks
+public class BoardColumn
 {
-  public List<BlockData> Column = new();
+  public List<BlockData> Cells = new();
 }
 
 [Serializable]
@@ -421,8 +302,7 @@ public enum MergeDirection
   LeftRight,
   LeftBottom,
   RightBottom,
-  LeftRightBottom,
-  None,
+  LeftRightBottom
 }
 
 [Serializable]
@@ -433,5 +313,13 @@ public class MergeData
   public BlockData BottomBlock;
   public BlockData TargetBlock;
   public MergeDirection Direction;
+  public MergeData(BlockData target, BlockData left, BlockData right, BlockData bottom, MergeDirection direction)
+  {
+    TargetBlock = target;
+    LeftBlock = left;
+    RightBlock = right;
+    BottomBlock = bottom;
+    Direction = direction;
+  }
 }
 

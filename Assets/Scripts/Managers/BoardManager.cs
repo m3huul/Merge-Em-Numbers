@@ -16,7 +16,7 @@ public class BoardManager : MonoBehaviour
   [SerializeField] private float CascadeDelay = 0.1f;
 
   [Header("Merge Data")]
-  [SerializeField] internal List<MergeData> MergeData;
+  [SerializeField] internal List<MergeData> MergeData = new();
 
   [Header("UI Elements")]
   [SerializeField] private Button RestartButton;
@@ -90,12 +90,11 @@ public class BoardManager : MonoBehaviour
     }
 
     CurrBlockTween?.Kill();
-    CurrBlockTween = block.transform.DOMoveY(destination.boardPosition.position.y, duration).SetEase(Ease.Linear)
+    CurrBlockTween = block.transform.DOLocalMoveY(destination.boardPosition.localPosition.y, duration).SetEase(Ease.Linear)
       .OnComplete(() =>
       {
         InputManager.Instance.BlockTransform = null;
         InputManager.Instance.enabled = false;
-        block.transform.position = destination.boardPosition.position;
         GridManager.Instance.PlaceBlockOnGrid(block, destination.gridPosition);
 
         if (GridManager.Instance.TryGetMerge(destination.gridPosition, out MergeData data))

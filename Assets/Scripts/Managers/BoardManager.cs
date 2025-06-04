@@ -27,7 +27,7 @@ public class BoardManager : MonoBehaviour
 
   void Awake()
   {
-    Application.targetFrameRate = -1;
+    Application.targetFrameRate = 200;
     if (Instance == null) Instance = this;
 
     if (!RestartButton)
